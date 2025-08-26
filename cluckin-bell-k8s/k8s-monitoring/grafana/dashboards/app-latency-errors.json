@@ -1,0 +1,27 @@
+{
+  "title": "Sitecore Application Latency & Errors",
+  "panels": [
+    {
+      "type": "graph",
+      "title": "Request Latency (P95)",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"dev\"}[5m])) by (le, pod))",
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Error Rate",
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{namespace=\"dev\",status=~\"5..\"}[5m])) / sum(rate(http_requests_total{namespace=\"dev\"}[5m]))",
+          "format": "time_series"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 27,
+  "version": 1
+}

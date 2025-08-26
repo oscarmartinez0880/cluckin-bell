@@ -1,0 +1,27 @@
+{
+  "title": "Solr Metrics",
+  "panels": [
+    {
+      "type": "graph",
+      "title": "Solr JVM Heap Usage",
+      "targets": [
+        {
+          "expr": "solr_jvm_memory_used_bytes",
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Solr Request Latency",
+      "targets": [
+        {
+          "expr": "rate(solr_request_duration_milliseconds_sum[5m]) / rate(solr_request_duration_milliseconds_count[5m])",
+          "format": "time_series"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 27,
+  "version": 1
+}

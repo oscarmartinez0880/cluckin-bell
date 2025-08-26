@@ -1,0 +1,46 @@
+alertmanager:
+  enabled: true
+
+prometheus:
+  prometheusSpec:
+    serviceMonitorSelectorNilUsesHelmValues: false
+    retention: 14d
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 50Gi
+    additionalScrapeConfigs:
+      - job_name: 'sitecore-cm'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_pod_label_app]
+            action: keep
+            regex: (dev);sitecore-cm
+        metrics_path: /metrics
+        scheme: http
+      - job_name: 'sitecore-cd'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_pod_label_app]
+            action: keep
+            regex: (dev);sitecore-cd
+        metrics_path: /metrics
+        scheme: http
+      - job_name: 'kubernetes-nodes'
+        kubernetes_sd_configs:
+          - role: node
+      - job_name: 'kubernetes-cadvisor'
+        kubernetes_sd_configs:
+          - role: node
+        metrics_path: /metrics/cadvisor
+      - job_name: 'solr-metrics'
+        static_configs:
+          - targets: ['solr.dev.svc.cluster.local:9854']
+      - job_name: 'redis-metrics'
+        static_configs:
+          - targets: ['redis.dev.svc.cluster.local:9121']

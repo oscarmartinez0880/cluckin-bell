@@ -1,0 +1,17 @@
+adminPassword: <admin-password>
+persistence:
+  enabled: true
+  size: 20Gi
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        url: http://monitoring-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090
+        access: proxy
+        isDefault: true
+sidecar:
+  dashboards:
+    enabled: true
+    label: grafana_dashboard
