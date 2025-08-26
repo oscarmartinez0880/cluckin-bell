@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: drumstick-web
+  namespace: cluckin-bell-dev
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: drumstick-web
+  template:
+    metadata:
+      labels:
+        app: drumstick-web
+    spec:
+      serviceAccountName: drumstick-web
+      containers:
+      - name: drumstick-web
+        image: 264765154707.dkr.ecr.us-east-1.amazonaws.com/cluckin-bell-app:latest
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: runtime-config
+          mountPath: /usr/share/nginx/html/env.js
+          subPath: env.js
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+      volumes:
+      - name: runtime-config
+        configMap:
+          name: drumstick-web-runtime-config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wingman-api
+  namespace: cluckin-bell-dev
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: wingman-api
+  template:
+    metadata:
+      labels:
+        app: wingman-api
+    spec:
+      serviceAccountName: wingman-api
+      containers:
+      - name: wingman-api
+        image: 264765154707.dkr.ecr.us-east-1.amazonaws.com/wingman-api:latest
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "400m"
