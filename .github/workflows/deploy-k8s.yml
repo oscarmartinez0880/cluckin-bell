@@ -1,0 +1,46 @@
+name: Deploy to EKS
+
+on:
+  workflow_dispatch:
+    inputs:
+      overlay:
+        description: "Kustomize overlay path"
+        required: true
+        default: k8s/overlays/prod
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  EKS_CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME }}
+  EKS_ASSUME_ROLE_ARN: ${{ vars.EKS_ASSUME_ROLE_ARN }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.EKS_ASSUME_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --name "$EKS_CLUSTER_NAME" --region "$AWS_REGION"
+
+      - name: Install kubectl kustomize
+        run: |
+          echo "Installing kustomize"
+          curl -sSL https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Apply overlay
+        run: |
+          set -euo pipefail
+          OVERLAY_PATH="${{ github.event.inputs.overlay }}"
+          kustomize build "$OVERLAY_PATH" | kubectl apply -f -
