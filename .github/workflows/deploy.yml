@@ -1,0 +1,42 @@
+name: Deploy to Kubernetes
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - qa
+        - prod
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+      
+      - name: Validate kustomize overlay
+        run: |
+          echo "Validating ${{ github.event.inputs.environment }} overlay..."
+          kustomize build k8s/overlays/${{ github.event.inputs.environment }}
+      
+      - name: Dry run deployment
+        run: |
+          echo "Would deploy to ${{ github.event.inputs.environment }} environment"
+          echo "Using overlay: k8s/overlays/${{ github.event.inputs.environment }}"
+          kustomize build k8s/overlays/${{ github.event.inputs.environment }} | kubectl apply --dry-run=client -f -
