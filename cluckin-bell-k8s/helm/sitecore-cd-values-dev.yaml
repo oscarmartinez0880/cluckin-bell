@@ -1,0 +1,25 @@
+image:
+  repository: <aws_account_id>.dkr.ecr.<region>.amazonaws.com/sitecore-cd
+  tag: "10.4"
+replicaCount: 1
+env:
+  SITECORE_CONNECTIONSTRINGS_SQL_CORE: "Data Source=<dev-rds-endpoint>;Initial Catalog=Sitecore_Core;User Id=admin;Password=XXXX"
+  SITECORE_CONNECTIONSTRINGS_SOLR_CORE: "http://solr.dev.svc.cluster.local:8983/solr"
+  SITECORE_CONNECTIONSTRINGS_REDIS_CORE: "redis:6379,password=XXXX,ssl=False,abortConnect=False"
+ingress:
+  enabled: true
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: "internet-facing"
+    alb.ingress.kubernetes.io/target-type: "ip"
+  hosts:
+    - host: cd.dev.example.com
+      paths:
+        - /
+resources:
+  requests:
+    cpu: "1000m"
+    memory: "2Gi"
+  limits:
+    cpu: "2000m"
+    memory: "4Gi"

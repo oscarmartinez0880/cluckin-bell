@@ -1,0 +1,27 @@
+{
+  "title": "Kubernetes Cluster Overview",
+  "panels": [
+    {
+      "type": "gauge",
+      "title": "Node CPU Usage",
+      "targets": [
+        {
+          "expr": "100 * sum(rate(node_cpu_seconds_total{mode!=\"idle\",mode!=\"iowait\"}[5m])) / count(node_cpu_seconds_total{mode=\"idle\"})",
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "type": "gauge",
+      "title": "Node Memory Usage",
+      "targets": [
+        {
+          "expr": "100 * (1 - sum(node_memory_MemAvailable_bytes) / sum(node_memory_MemTotal_bytes))",
+          "format": "time_series"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 27,
+  "version": 1
+}
