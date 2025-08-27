@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: drumstick-web
+  namespace: cluckin-bell-dev
+  labels:
+    app: drumstick-web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: drumstick-web
+  template:
+    metadata:
+      labels:
+        app: drumstick-web
+    spec:
+      serviceAccountName: drumstick-web
+      containers:
+        - name: web
+          image: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/<ECR_REPOSITORY>:<IMAGE_TAG>
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          volumeMounts:
+            - name: env-config
+              mountPath: /usr/share/nginx/html/env.js
+              subPath: env.js
+      volumes:
+        - name: env-config
+          configMap:
+            name: cluckin-bell-env-config

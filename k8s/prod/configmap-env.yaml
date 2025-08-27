@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: drumstick-web-runtime-config
+  name: cluckin-bell-env-config
   namespace: cluckin-bell-prod
 data:
   env.js: |
