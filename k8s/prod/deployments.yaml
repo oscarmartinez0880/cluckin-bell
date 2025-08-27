@@ -6,34 +6,22 @@ metadata:
 spec:
   replicas: 3
   selector:
-    matchLabels:
-      app: drumstick-web
+    matchLabels: { app: drumstick-web }
   template:
     metadata:
-      labels:
-        app: drumstick-web
+      labels: { app: drumstick-web }
     spec:
       serviceAccountName: drumstick-web
       containers:
-      - name: drumstick-web
-        image: 346746763840.dkr.ecr.us-east-1.amazonaws.com/cluckin-bell-app:latest
-        ports:
-        - containerPort: 80
-        volumeMounts:
-        - name: runtime-config
-          mountPath: /usr/share/nginx/html/env.js
-          subPath: env.js
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "200m"
+        - name: web
+          image: 346746763840.dkr.ecr.us-east-1.amazonaws.com/cluckin-bell-app:latest
+          ports: [{ containerPort: 80 }]
+          readinessProbe: { httpGet: { path: /healthz, port: 80 }, initialDelaySeconds: 5, periodSeconds: 10 }
+          livenessProbe:  { httpGet: { path: /healthz, port: 80 }, initialDelaySeconds: 15, periodSeconds: 20 }
+          volumeMounts:
+            - { name: env-config, mountPath: /usr/share/nginx/html/env.js, subPath: env.js }
       volumes:
-      - name: runtime-config
-        configMap:
-          name: drumstick-web-runtime-config
+        - { name: env-config, configMap: { name: cluckin-bell-env-config } }
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -43,23 +31,15 @@ metadata:
 spec:
   replicas: 3
   selector:
-    matchLabels:
-      app: wingman-api
+    matchLabels: { app: wingman-api }
   template:
     metadata:
-      labels:
-        app: wingman-api
+      labels: { app: wingman-api }
     spec:
       serviceAccountName: wingman-api
       containers:
-      - name: wingman-api
-        image: 346746763840.dkr.ecr.us-east-1.amazonaws.com/wingman-api:latest
-        ports:
-        - containerPort: 8080
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "200m"
-          limits:
-            memory: "512Mi"
-            cpu: "400m"
+        - name: api
+          image: 346746763840.dkr.ecr.us-east-1.amazonaws.com/wingman-api:latest
+          ports: [{ containerPort: 8080 }]
+          readinessProbe: { httpGet: { path: /healthz, port: 8080 }, initialDelaySeconds: 5, periodSeconds: 10 }
+          livenessProbe:  { httpGet: { path: /healthz, port: 8080 }, initialDelaySeconds: 15, periodSeconds: 20 }

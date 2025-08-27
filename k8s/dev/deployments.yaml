@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: drumstick-web
   namespace: cluckin-bell-dev
+  labels:
+    app: drumstick-web
 spec:
   replicas: 2
   selector:
@@ -15,31 +17,39 @@ spec:
     spec:
       serviceAccountName: drumstick-web
       containers:
-      - name: drumstick-web
-        image: 264765154707.dkr.ecr.us-east-1.amazonaws.com/cluckin-bell-app:latest
-        ports:
-        - containerPort: 80
-        volumeMounts:
-        - name: runtime-config
-          mountPath: /usr/share/nginx/html/env.js
-          subPath: env.js
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "200m"
+        - name: web
+          image: 264765154707.dkr.ecr.us-east-1.amazonaws.com/cluckin-bell-app:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          volumeMounts:
+            - name: env-config
+              mountPath: /usr/share/nginx/html/env.js
+              subPath: env.js
       volumes:
-      - name: runtime-config
-        configMap:
-          name: drumstick-web-runtime-config
+        - name: env-config
+          configMap:
+            name: cluckin-bell-env-config
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: wingman-api
   namespace: cluckin-bell-dev
+  labels:
+    app: wingman-api
 spec:
   replicas: 2
   selector:
@@ -52,14 +62,20 @@ spec:
     spec:
       serviceAccountName: wingman-api
       containers:
-      - name: wingman-api
-        image: 264765154707.dkr.ecr.us-east-1.amazonaws.com/wingman-api:latest
-        ports:
-        - containerPort: 8080
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "200m"
-          limits:
-            memory: "512Mi"
-            cpu: "400m"
+        - name: api
+          image: 264765154707.dkr.ecr.us-east-1.amazonaws.com/wingman-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 20

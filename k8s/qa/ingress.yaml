@@ -3,9 +3,8 @@ kind: Ingress
 metadata:
   name: drumstick-web
   namespace: cluckin-bell-qa
-  annotations:
-    kubernetes.io/ingress.class: nginx
 spec:
+  ingressClassName: nginx
   rules:
   - host: qa.cluckin-bell.com
     http:
@@ -23,9 +22,8 @@ kind: Ingress
 metadata:
   name: wingman-api
   namespace: cluckin-bell-qa
-  annotations:
-    kubernetes.io/ingress.class: nginx
 spec:
+  ingressClassName: nginx
   rules:
   - host: api.qa.cluckin-bell.com
     http:
