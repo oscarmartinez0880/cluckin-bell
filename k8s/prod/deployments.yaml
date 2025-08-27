@@ -15,7 +15,7 @@ spec:
     spec:
       serviceAccountName: drumstick-web
       containers:
-      - name: drumstick-web
+      - name: web
         image: 346746763840.dkr.ecr.us-east-1.amazonaws.com/cluckin-bell-app:latest
         ports:
         - containerPort: 80
@@ -52,7 +52,7 @@ spec:
     spec:
       serviceAccountName: wingman-api
       containers:
-      - name: wingman-api
+      - name: api
         image: 346746763840.dkr.ecr.us-east-1.amazonaws.com/wingman-api:latest
         ports:
         - containerPort: 8080
