@@ -1,41 +1,123 @@
-name: Deploy Manifests (manual)
+---
+name: Deploy to Environment
 
-on:
+"on":
   workflow_dispatch:
     inputs:
       environment:
-        description: "Environment to deploy (dev|qa|prod)"
+        description: 'Target environment'
         required: true
-        default: "dev"
         type: choice
-        options: [dev, qa, prod]
-      eks_cluster_name:
-        description: "EKS cluster name"
-        required: true
-      role_to_assume:
-        description: "IAM role ARN to assume for kubectl access"
-        required: true
+        options:
+          - dev
+          - qa
+          - prod
+      web_image_tag:
+        description: >-
+          Web image tag (optional, used for QA to deploy unique tag
+          like sha-abc123)
+        required: false
+        type: string
+      web_image_digest:
+        description: >-
+          Web image digest (required for prod, format: sha256:...)
+        required: false
+        type: string
+      api_image_tag:
+        description: 'API image tag (optional, used for QA deployments)'
+        required: false
+        type: string
+      api_image_digest:
+        description: >-
+          API image digest (optional for prod, format: sha256:...)
+        required: false
+        type: string
 
 permissions:
-  contents: read
   id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
 
 jobs:
   deploy:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ github.event.inputs.role_to_assume }}
-          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ECR_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Update kubeconfig
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Derive ECR registry for environment
+        id: ecr
+        shell: bash
         run: |
-          aws eks update-kubeconfig --region "${{ vars.AWS_REGION }}" --name "${{ github.event.inputs.eks_cluster_name }}"
+          case "${{ github.event.inputs.environment }}" in
+            dev|qa) ACCOUNT_ID=264765154707 ;;
+            prod)   ACCOUNT_ID=346746763840 ;;
+          esac
+          echo "registry=${ACCOUNT_ID}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com" \
+            >> "$GITHUB_OUTPUT"
 
-      - name: Apply manifests
+      - name: Update kubeconfig for EKS cluster
+        shell: bash
+        run: |
+          case "${{ github.event.inputs.environment }}" in
+            dev) CLUSTER_NAME="cluckin-bell-dev" ;;
+            qa)  CLUSTER_NAME="cluckin-bell-qa" ;;
+            prod) CLUSTER_NAME="cluckin-bell-prod" ;;
+          esac
+          aws eks update-kubeconfig --region "${{ env.AWS_REGION }}" --name "$CLUSTER_NAME"
+
+      - name: Apply Kubernetes manifests
+        shell: bash
         run: |
           kubectl apply -f k8s/${{ github.event.inputs.environment }}/
+
+      - name: Patch images for QA
+        if: ${{ github.event.inputs.environment == 'qa' }}
+        shell: bash
+        run: |
+          NS=cluckin-bell-qa
+          REGISTRY="${{ steps.ecr.outputs.registry }}"
+          WEB_REPO=cluckin-bell-app
+          API_REPO=wingman-api
+          if [ -z "${{ github.event.inputs.web_image_tag }}" ]; then
+            echo "web_image_tag is required for QA to ensure immutability" >&2
+            exit 1
+          fi
+          kubectl -n "$NS" set image deployment/drumstick-web \
+            web="${REGISTRY}/${WEB_REPO}:${{ github.event.inputs.web_image_tag }}"
+          if [ -n "${{ github.event.inputs.api_image_tag }}" ]; then
+            kubectl -n "$NS" set image deployment/wingman-api \
+              api="${REGISTRY}/${API_REPO}:${{ github.event.inputs.api_image_tag }}"
+          fi
+
+      - name: Patch images for Prod (digests)
+        if: ${{ github.event.inputs.environment == 'prod' }}
+        shell: bash
+        run: |
+          NS=cluckin-bell-prod
+          REGISTRY="${{ steps.ecr.outputs.registry }}"
+          WEB_REPO=cluckin-bell-app
+          API_REPO=wingman-api
+          if [ -z "${{ github.event.inputs.web_image_digest }}" ]; then
+            echo "web_image_digest is required for prod deployments" \
+              "(use sha256:...)" >&2
+            exit 1
+          fi
+          kubectl -n "$NS" set image deployment/drumstick-web \
+            web="${REGISTRY}/${WEB_REPO}@${{ github.event.inputs.web_image_digest }}"
+          if [ -n "${{ github.event.inputs.api_image_digest }}" ]; then
+            kubectl -n "$NS" set image deployment/wingman-api \
+              api="${REGISTRY}/${API_REPO}@${{ github.event.inputs.api_image_digest }}"
+          fi
