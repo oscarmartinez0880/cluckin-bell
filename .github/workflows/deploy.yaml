@@ -1,0 +1,113 @@
+---
+name: Deploy to Environment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - dev
+          - qa
+          - prod
+      web_image_tag:
+        description: >-
+          Web image tag (optional, used for QA to deploy unique tag
+          like sha-abc123)
+        required: false
+        type: string
+      web_image_digest:
+        description: >-
+          Web image digest (required for prod, format: sha256:...)
+        required: false
+        type: string
+      api_image_tag:
+        description: 'API image tag (optional, used for QA deployments)'
+        required: false
+        type: string
+      api_image_digest:
+        description: >-
+          API image digest (optional for prod, format: sha256:...)
+        required: false
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ECR_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Derive ECR registry for environment
+        id: ecr
+        shell: bash
+        run: |
+          case "${{ github.event.inputs.environment }}" in
+            dev|qa) ACCOUNT_ID=264765154707 ;;
+            prod)   ACCOUNT_ID=346746763840 ;;
+          esac
+          echo "registry=${ACCOUNT_ID}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com" \
+            >> "$GITHUB_OUTPUT"
+
+      - name: Apply Kubernetes manifests
+        shell: bash
+        run: |
+          kubectl apply -f k8s/${{ github.event.inputs.environment }}/
+
+      - name: Patch images for QA
+        if: ${{ github.event.inputs.environment == 'qa' }}
+        shell: bash
+        run: |
+          NS=cluckin-bell-qa
+          REGISTRY="${{ steps.ecr.outputs.registry }}"
+          WEB_REPO=cluckin-bell-app
+          API_REPO=wingman-api
+          if [ -z "${{ github.event.inputs.web_image_tag }}" ]; then
+            echo "web_image_tag is required for QA to ensure immutability" >&2
+            exit 1
+          fi
+          kubectl -n "$NS" set image deployment/drumstick-web \
+            web="${REGISTRY}/${WEB_REPO}:${{ github.event.inputs.web_image_tag }}"
+          if [ -n "${{ github.event.inputs.api_image_tag }}" ]; then
+            kubectl -n "$NS" set image deployment/wingman-api \
+              api="${REGISTRY}/${API_REPO}:${{ github.event.inputs.api_image_tag }}"
+          fi
+
+      - name: Patch images for Prod (digests)
+        if: ${{ github.event.inputs.environment == 'prod' }}
+        shell: bash
+        run: |
+          NS=cluckin-bell-prod
+          REGISTRY="${{ steps.ecr.outputs.registry }}"
+          WEB_REPO=cluckin-bell-app
+          API_REPO=wingman-api
+          if [ -z "${{ github.event.inputs.web_image_digest }}" ]; then
+            echo "web_image_digest is required for prod deployments" \
+              "(use sha256:...)" >&2
+            exit 1
+          fi
+          kubectl -n "$NS" set image deployment/drumstick-web \
+            web="${REGISTRY}/${WEB_REPO}@${{ github.event.inputs.web_image_digest }}"
+          if [ -n "${{ github.event.inputs.api_image_digest }}" ]; then
+            kubectl -n "$NS" set image deployment/wingman-api \
+              api="${REGISTRY}/${API_REPO}@${{ github.event.inputs.api_image_digest }}"
+          fi
