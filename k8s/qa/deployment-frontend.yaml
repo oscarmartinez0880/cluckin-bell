@@ -14,7 +14,8 @@ spec:
       serviceAccountName: drumstick-web
       containers:
         - name: web
-          image: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/<ECR_REPOSITORY>:<IMAGE_TAG>
+          image: 264765154707.dkr.ecr.us-east-1.amazonaws.com/cluckin-bell-app:latest
+          imagePullPolicy: IfNotPresent
           ports: [{ containerPort: 80 }]
           readinessProbe: { httpGet: { path: /healthz, port: 80 }, initialDelaySeconds: 5, periodSeconds: 10 }
           livenessProbe:  { httpGet: { path: /healthz, port: 80 }, initialDelaySeconds: 15, periodSeconds: 20 }
