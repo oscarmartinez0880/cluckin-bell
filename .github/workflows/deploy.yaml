@@ -1,0 +1,41 @@
+name: Deploy Manifests (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy (dev|qa|prod)"
+        required: true
+        default: "dev"
+        type: choice
+        options: [dev, qa, prod]
+      eks_cluster_name:
+        description: "EKS cluster name"
+        required: true
+      role_to_assume:
+        description: "IAM role ARN to assume for kubectl access"
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ github.event.inputs.role_to_assume }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --region "${{ vars.AWS_REGION }}" --name "${{ github.event.inputs.eks_cluster_name }}"
+
+      - name: Apply manifests
+        run: |
+          kubectl apply -f k8s/${{ github.event.inputs.environment }}/
