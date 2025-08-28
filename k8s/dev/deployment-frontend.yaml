@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: drumstick-web
-  namespace: cluckin-bell-dev
+  namespace: dev
   labels:
     app: drumstick-web
 spec:
@@ -18,7 +18,7 @@ spec:
       serviceAccountName: drumstick-web
       containers:
         - name: web
-          image: <ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/<ECR_REPOSITORY>:<IMAGE_TAG>
+          image: 264765154707.dkr.ecr.us-east-1.amazonaws.com/cluckin-bell-app:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80

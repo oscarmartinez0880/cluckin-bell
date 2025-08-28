@@ -14,11 +14,11 @@ k8s/
 
 ## Environments and Namespaces
 
-| Environment | Namespace | AWS Account | Account ID |
-|-------------|-----------|-------------|------------|
-| Development | `cluckin-bell-dev` | cluckin-bell-qa | 264765154707 |
-| QA | `cluckin-bell-qa` | cluckin-bell-qa | 264765154707 |
-| Production | `cluckin-bell-prod` | cluckin-bell-prod | 346746763840 |
+| Environment | Namespace | AWS Account | Account ID | Cluster |
+|-------------|-----------|-------------|------------|---------|
+| Development | `dev` | cluckin-bell-nonprod | 264765154707 | cluckn-bell-nonprod |
+| QA | `qa` | cluckin-bell-nonprod | 264765154707 | cluckn-bell-nonprod |
+| Production | `prod` | cluckin-bell-prod | 346746763840 | cluckn-bell-prod |
 
 ## Applications
 
@@ -93,6 +93,16 @@ window.__ENV = {
 ```
 
 ## Deployment Instructions
+
+### GitOps Deployment (Recommended)
+
+For production deployments, use the GitOps approach with Argo CD:
+
+1. **Deploy infrastructure** using Terraform (see cluckin-bell-infra repository)
+2. **Bootstrap Argo CD** following instructions in `argocd/README.md`
+3. **Applications are automatically deployed** via GitOps
+
+### Manual Deployment (Development/Testing)
 
 ### Prerequisites
 
@@ -197,10 +207,10 @@ To scale applications:
 
 ```bash
 # Scale drumstick-web in dev
-kubectl scale deployment drumstick-web -n cluckin-bell-dev --replicas=3
+kubectl scale deployment drumstick-web -n dev --replicas=3
 
 # Scale wingman-api in prod
-kubectl scale deployment wingman-api -n cluckin-bell-prod --replicas=5
+kubectl scale deployment wingman-api -n prod --replicas=5
 ```
 
 ## Cleanup
@@ -212,5 +222,5 @@ To remove all resources for an environment:
 kubectl delete -f k8s/dev/
 
 # Or delete the entire namespace (removes everything)
-kubectl delete namespace cluckin-bell-dev
+kubectl delete namespace dev
 ```

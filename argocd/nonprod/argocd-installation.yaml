@@ -1,0 +1,89 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd
+  namespace: argocd
+  labels:
+    application: cluckn-bell
+    environment: platform
+spec:
+  project: default
+  source:
+    repoURL: https://argoproj.github.io/argo-helm
+    targetRevision: 7.6.12
+    chart: argo-cd
+    helm:
+      values: |
+        global:
+          logging:
+            level: info
+
+        server:
+          ingress:
+            enabled: false
+
+          config:
+            # Enable insecure mode for internal access
+            insecure: true
+
+            # Repository configuration for this repo
+            repositories: |
+              - type: git
+                url: https://github.com/oscarmartinez0880/cluckin-bell
+
+            # OIDC configuration (placeholder for future)
+            oidc.config: |
+              name: AWS SSO
+              issuer: https://portal.sso.us-east-1.amazonaws.com/saml/assertion/placeholder
+              clientId: placeholder
+              clientSecret: $oidc.aws.clientSecret
+              requestedScopes: ["openid", "profile", "email"]
+              requestedIDTokenClaims: {"groups": {"essential": true}}
+
+        # Resource limits
+        controller:
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+
+        redis:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+
+        repo:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 200m
+              memory: 512Mi
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
