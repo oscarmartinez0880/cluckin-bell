@@ -1,0 +1,27 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cms-internal
+  namespace: cluckn-bell-dev
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internal
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+    alb.ingress.kubernetes.io/group.name: cms-internal-dev
+    external-dns.alpha.kubernetes.io/hostname: cms.internal.dev.cluckn-bell.com
+    # TODO: Add EKS API CIDR allowlist when infra exposes CIDR variables
+    # alb.ingress.kubernetes.io/inbound-cidrs: "10.0.0.0/16"
+spec:
+  rules:
+    - host: cms.internal.dev.cluckn-bell.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cms-svc
+                port:
+                  number: 80
