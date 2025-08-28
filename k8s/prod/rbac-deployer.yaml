@@ -1,0 +1,36 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: cluckn-bell-prod
+  name: namespace-deployer
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps", "secrets", "serviceaccounts"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get", "list"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets", "daemonsets", "statefulsets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses", "networkpolicies"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  - apiGroups: ["extensions"]
+    resources: ["ingresses"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: namespace-deployer-binding
+  namespace: cluckn-bell-prod
+subjects:
+  - kind: User
+    name: arn:aws:iam::346746763840:role/cb-eks-deploy-prod
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: namespace-deployer
+  apiGroup: rbac.authorization.k8s.io
