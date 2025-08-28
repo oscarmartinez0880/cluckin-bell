@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: external-dns
+  namespace: argocd
+spec:
+  source:
+    helm:
+      values: |
+        serviceAccount:
+          create: true
+          name: external-dns
+          annotations:
+            eks.amazonaws.com/role-arn: arn:aws:iam::264765154707:role/cb-external-dns-role
+        provider: aws
+        aws:
+          region: us-east-1
+          zoneType: public
+          assumeRole: ""
+          batchChangeSize: 1000
+          batchChangeInterval: "1s"
+          evaluateTargetHealth: true
+        domainFilters:
+          - dev.cluckin-bell.com
+          - qa.cluckin-bell.com
+        txtOwnerId: cb-dev
+        txtPrefix: external-dns-
+        policy: sync
+        registry: txt
+        interval: 1m
+        triggerLoopOnEvent: false
+        resources:
+          requests:
+            cpu: 50m
+            memory: 50Mi
+          limits:
+            cpu: 100m
+            memory: 100Mi
+        logLevel: info
+        logFormat: text

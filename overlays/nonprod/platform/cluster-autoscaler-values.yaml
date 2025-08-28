@@ -1,0 +1,41 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cluster-autoscaler
+  namespace: argocd
+spec:
+  source:
+    helm:
+      values: |
+        autoDiscovery:
+          clusterName: cluckin-bell-nonprod
+          enabled: true
+        awsRegion: us-east-1
+        serviceAccount:
+          create: true
+          name: cluster-autoscaler
+          annotations:
+            eks.amazonaws.com/role-arn: arn:aws:iam::264765154707:role/cb-cluster-autoscaler-role
+        rbac:
+          create: true
+          serviceAccount:
+            name: cluster-autoscaler
+        nodeSelector: {}
+        tolerations: []
+        affinity: {}
+        resources:
+          requests:
+            cpu: 100m
+            memory: 300Mi
+          limits:
+            cpu: 100m
+            memory: 300Mi
+        extraArgs:
+          logtostderr: true
+          stderrthreshold: info
+          v: 4
+          skip-nodes-with-local-storage: false
+          expander: least-waste
+          node-group-auto-discovery: asg:tag=k8s.io/cluster-autoscaler/enabled,k8s.io/cluster-autoscaler/cluckin-bell-nonprod
+          balance-similar-node-groups: false
+          skip-nodes-with-system-pods: false

@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: cluckin-bell-qa
+  name: qa
   labels:
-    app.kubernetes.io/name: cluckin-bell
-    app.kubernetes.io/environment: qa
+    application: cluckn-bell
+    environment: qa
