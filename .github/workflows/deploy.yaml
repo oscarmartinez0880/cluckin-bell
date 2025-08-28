@@ -1,65 +1,96 @@
----
-name: Deploy
+name: Deploy Kubernetes Manifests
 
 on:
+  push:
+    branches: [develop, staging, main]
+    paths:
+      - 'k8s/**'
   workflow_dispatch:
     inputs:
       environment:
-        description: "Environment to deploy (dev|qa|prod)"
+        description: 'Target environment (dev|qa|prod)'
         required: true
         type: choice
         options: [dev, qa, prod]
 
 permissions:
-  contents: read
   id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
 
 jobs:
-  deploy:
+  determine:
+    name: Determine environment and AWS role
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment }}
+    outputs:
+      environment: ${{ steps.set.outputs.environment }}
+      role_arn: ${{ steps.set.outputs.role_arn }}
+      cluster_name: ${{ steps.set.outputs.cluster_name }}
+      k8s_dir: ${{ steps.set.outputs.k8s_dir }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - id: set
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ENV="${{ inputs.environment }}"
+          elif [ "${{ github.ref }}" = "refs/heads/develop" ]; then
+            ENV="dev"
+          elif [ "${{ github.ref }}" = "refs/heads/staging" ]; then
+            ENV="qa"
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            ENV="prod"
+          else
+            echo "Unsupported branch: ${{ github.ref }}" >&2
+            exit 1
+          fi
+          if [ "$ENV" = "prod" ]; then
+            ROLE_ARN="arn:aws:iam::346746763840:role/GH_EKS_Deploy_cb_prod_use1"
+            CLUSTER="cluckn-bell-prod"
+          else
+            # dev or qa
+            CLUSTER="cluckn-bell-nonprod"
+            if [ "$ENV" = "dev" ]; then
+              ROLE_ARN="arn:aws:iam::264765154707:role/GH_EKS_Deploy_cb_dev_use1"
+            else
+              ROLE_ARN="arn:aws:iam::264765154707:role/GH_EKS_Deploy_cb_qa_use1"
+            fi
+          fi
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+          echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
+          echo "cluster_name=$CLUSTER" >> $GITHUB_OUTPUT
+          echo "k8s_dir=k8s/$ENV" >> $GITHUB_OUTPUT
 
-      - name: Configure AWS credentials
+  deploy:
+    name: Deploy ${{ needs.determine.outputs.environment }} manifests
+    runs-on: ubuntu-latest
+    needs: determine
+    environment: ${{ needs.determine.outputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ 
-            github.event.inputs.environment == 'dev' && secrets.AWS_EKS_DEPLOY_ROLE_ARN_DEV ||
-            github.event.inputs.environment == 'qa' && secrets.AWS_EKS_DEPLOY_ROLE_ARN_QA ||
-            secrets.AWS_EKS_DEPLOY_ROLE_ARN_PROD 
-          }}
-          aws-region: us-east-1
+          role-to-assume: ${{ needs.determine.outputs.role_arn }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: gha-${{ github.run_id }}
 
-      - name: Update kubeconfig
-        run: |
-          if [ "${{ github.event.inputs.environment }}" = "prod" ]; then
-            CLUSTER_NAME="cb-use1-prod"
-          else
-            CLUSTER_NAME="cb-use1-shared"
-          fi
-          
-          aws eks update-kubeconfig --region us-east-1 --name "$CLUSTER_NAME"
+      - name: Setup kubectl 1.30
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.30.0
 
-      - name: Deploy to Kubernetes
+      - name: Update kubeconfig for target cluster
         run: |
-          ENV="${{ github.event.inputs.environment }}"
-          echo "Deploying to environment: $ENV"
-          
-          kubectl apply -f k8s/$ENV/
+          aws eks update-kubeconfig \
+            --region ${{ env.AWS_REGION }} \
+            --name ${{ needs.determine.outputs.cluster_name }}
 
-      - name: Verify deployment
+      - name: Apply manifests
         run: |
-          ENV="${{ github.event.inputs.environment }}"
-          NAMESPACE="cluckn-bell-$ENV"
-          
-          echo "Verifying deployment in namespace: $NAMESPACE"
-          
-          # Wait for deployments to be ready
-          kubectl rollout status deployment/drumstick-web -n $NAMESPACE --timeout=300s
-          kubectl rollout status deployment/wingman-api -n $NAMESPACE --timeout=300s
-          
-          # Show status
-          kubectl get all -n $NAMESPACE
-          kubectl get ingress -n $NAMESPACE
+          kubectl apply -f ${{ needs.determine.outputs.k8s_dir }}
