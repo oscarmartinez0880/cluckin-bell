@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: sitecore-config
-  namespace: qa
-data:
-  SITECORE_ENVIRONMENT: "QA"
-  LOG_LEVEL: "Info"

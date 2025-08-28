@@ -1,13 +1,12 @@
 ---
-name: Deploy Manifests
+name: Deploy
 
-'on':
+on:
   workflow_dispatch:
     inputs:
       environment:
         description: "Environment to deploy (dev|qa|prod)"
         required: true
-        default: "dev"
         type: choice
         options: [dev, qa, prod]
 
@@ -17,45 +16,50 @@ permissions:
 
 jobs:
   deploy:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Configure AWS credentials (OIDC)
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN_EKS }}
-          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ 
+            github.event.inputs.environment == 'dev' && secrets.AWS_EKS_DEPLOY_ROLE_ARN_DEV ||
+            github.event.inputs.environment == 'qa' && secrets.AWS_EKS_DEPLOY_ROLE_ARN_QA ||
+            secrets.AWS_EKS_DEPLOY_ROLE_ARN_PROD 
+          }}
+          aws-region: us-east-1
 
       - name: Update kubeconfig
         run: |
-          aws eks update-kubeconfig \
-            --region "${{ vars.AWS_REGION }}" \
-            --name "${{ vars.EKS_CLUSTER_NAME }}"
+          if [ "${{ github.event.inputs.environment }}" = "prod" ]; then
+            CLUSTER_NAME="cb-use1-prod"
+          else
+            CLUSTER_NAME="cb-use1-shared"
+          fi
+          
+          aws eks update-kubeconfig --region us-east-1 --name "$CLUSTER_NAME"
 
-      - name: Apply manifests
+      - name: Deploy to Kubernetes
         run: |
           ENV="${{ github.event.inputs.environment }}"
-          echo "Deploying to environment: ${ENV}"
-          echo "Target namespace: cluckin-bell-${ENV}"
-          kubectl apply -f k8s/${ENV}/
+          echo "Deploying to environment: $ENV"
+          
+          kubectl apply -f k8s/$ENV/
 
       - name: Verify deployment
         run: |
           ENV="${{ github.event.inputs.environment }}"
-          NAMESPACE="cluckin-bell-${ENV}"
-
-          # Use KUBE_NAMESPACE if available, otherwise use the
-          # environment-based namespace
-          if [ -n "${{ vars.KUBE_NAMESPACE }}" ]; then
-            NAMESPACE="${{ vars.KUBE_NAMESPACE }}"
-            echo "Using KUBE_NAMESPACE: ${NAMESPACE}"
-          else
-            echo "Using default namespace: ${NAMESPACE}"
-          fi
-
-          echo "Checking deployment status in namespace: ${NAMESPACE}"
-          kubectl get all -n ${NAMESPACE}
-          kubectl get configmap -n ${NAMESPACE}
-          kubectl get serviceaccount -n ${NAMESPACE}
+          NAMESPACE="cluckn-bell-$ENV"
+          
+          echo "Verifying deployment in namespace: $NAMESPACE"
+          
+          # Wait for deployments to be ready
+          kubectl rollout status deployment/drumstick-web -n $NAMESPACE --timeout=300s
+          kubectl rollout status deployment/wingman-api -n $NAMESPACE --timeout=300s
+          
+          # Show status
+          kubectl get all -n $NAMESPACE
+          kubectl get ingress -n $NAMESPACE
