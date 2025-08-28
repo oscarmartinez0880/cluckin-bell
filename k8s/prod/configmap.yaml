@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: drumstick-web-runtime-config
+  namespace: cluckn-bell-prod
+data:
+  env.js: |
+    window.__ENV = {
+      API_BASE_URL: "https://api.cluckn-bell.com"
+    };

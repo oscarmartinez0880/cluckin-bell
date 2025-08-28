@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: drumstick-web
+  namespace: cluckn-bell-dev
+spec:
+  selector:
+    app: drumstick-web
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wingman-api-svc
+  namespace: cluckn-bell-dev
+spec:
+  selector:
+    app: wingman-api
+  ports:
+    - port: 8080
+      targetPort: 8080

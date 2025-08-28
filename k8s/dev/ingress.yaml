@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cluckn-bell-public
+  namespace: cluckn-bell-dev
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+    external-dns.alpha.kubernetes.io/hostname: dev.cluckn-bell.com
+    # TODO (HTTPS): add alb.ingress.kubernetes.io/certificate-arn and redirect
+    # TODO (WAF): add alb.ingress.kubernetes.io/wafv2-acl-arn when cluckn-bell-infra merges
+spec:
+  rules:
+    - host: dev.cluckn-bell.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: wingman-api-svc
+                port:
+                  number: 8080
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: drumstick-web
+                port:
+                  number: 80

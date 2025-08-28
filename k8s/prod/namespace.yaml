@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: prod
+  name: cluckn-bell-prod
   labels:
-    application: cluckn-bell
-    environment: prod
+    app.kubernetes.io/name: cluckn-bell
+    app.kubernetes.io/environment: prod
