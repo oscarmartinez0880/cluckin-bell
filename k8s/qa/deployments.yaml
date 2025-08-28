@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: drumstick-web
+  namespace: cluckn-bell-qa
+  labels:
+    app: drumstick-web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: drumstick-web
+  template:
+    metadata:
+      labels:
+        app: drumstick-web
+    spec:
+      serviceAccountName: drumstick-web
+      containers:
+        - name: web
+          image: 264765154707.dkr.ecr.us-east-1.amazonaws.com/cluckin-bell-app:latest
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: runtime-config
+              mountPath: /usr/share/nginx/html/env.js
+              subPath: env.js
+      volumes:
+        - name: runtime-config
+          configMap:
+            name: drumstick-web-runtime-config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wingman-api
+  namespace: cluckn-bell-qa
+  labels:
+    app: wingman-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: wingman-api
+  template:
+    metadata:
+      labels:
+        app: wingman-api
+    spec:
+      serviceAccountName: wingman-api
+      containers:
+        - name: api
+          image: 264765154707.dkr.ecr.us-east-1.amazonaws.com/wingman-api:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ROOT_PATH
+              value: "/api"
+            - name: CMS_BASE_URL
+              value: "http://cms-svc."

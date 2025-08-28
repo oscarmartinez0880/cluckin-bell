@@ -1,0 +1,149 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: wordpress-qa
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://charts.bitnami.com/bitnami
+    chart: wordpress
+    targetRevision: 19.1.5
+    helm:
+      values: |
+    replicaCount: 1
+    
+    image:
+      registry: docker.io
+      repository: bitnami/wordpress
+      tag: 6.4.2-debian-11-r0
+    
+    wordpressUsername: admin
+    wordpressPassword: ""
+    existingSecret: wordpress-secret
+    existingSecretKey: wordpress-password
+    
+    wordpressEmail: admin@cluckin-bell.com
+    wordpressBlogName: "Cluckin Bell QA"
+    wordpressFirstName: Admin
+    wordpressLastName: User
+    
+    wordpressScheme: http
+    wordpressSkipInstall: false
+    allowEmptyPassword: false
+    allowOverrideNone: false
+    htaccessPersistenceEnabled: false
+    
+    service:
+      type: ClusterIP
+      ports:
+        http: 80
+    
+    ingress:
+      enabled: true
+      ingressClassName: alb
+      annotations:
+        kubernetes.io/ingress.class: alb
+        alb.ingress.kubernetes.io/scheme: internet-facing
+        alb.ingress.kubernetes.io/target-type: ip
+        alb.ingress.kubernetes.io/group.name: cluckin-bell-nonprod
+        alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+        alb.ingress.kubernetes.io/backend-protocol: HTTP
+        alb.ingress.kubernetes.io/healthcheck-path: /wp-admin/install.php
+      hostname: qa.cluckin-bell.com
+      path: /
+      pathType: Prefix
+    
+    persistence:
+      enabled: true
+      storageClass: gp3
+      accessModes:
+        - ReadWriteOnce
+      size: 10Gi
+    
+    volumePermissions:
+      enabled: false
+    
+    nodeSelector:
+      env: qa
+    
+    affinity: {}
+    tolerations: []
+    
+    resources:
+      requests:
+        memory: 512Mi
+        cpu: 300m
+      limits:
+        memory: 1Gi
+        cpu: 500m
+    
+    livenessProbe:
+      enabled: true
+      initialDelaySeconds: 120
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 6
+      successThreshold: 1
+    
+    readinessProbe:
+      enabled: true
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 6
+      successThreshold: 1
+    
+    autoscaling:
+      enabled: false
+    
+    mariadb:
+      enabled: true
+      auth:
+        rootPassword: ""
+        database: bitnami_wordpress
+        username: bn_wordpress
+        password: ""
+        existingSecret: mariadb-secret
+      architecture: standalone
+      primary:
+        persistence:
+          enabled: true
+          storageClass: gp3
+          accessModes:
+            - ReadWriteOnce
+          size: 8Gi
+        nodeSelector:
+          env: qa
+        resources:
+          requests:
+            memory: 256Mi
+            cpu: 250m
+          limits:
+            memory: 512Mi
+            cpu: 500m
+    
+    memcached:
+      enabled: false
+    
+    externalDatabase:
+      host: ""
+      port: 3306
+      user: bn_wordpress
+      password: ""
+      database: bitnami_wordpress
+      existingSecret: ""
+    
+    networkPolicy:
+      enabled: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: qa
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true

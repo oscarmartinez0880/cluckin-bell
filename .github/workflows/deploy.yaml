@@ -1,0 +1,96 @@
+name: Deploy Kubernetes Manifests
+
+on:
+  push:
+    branches: [develop, staging, main]
+    paths:
+      - 'k8s/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment (dev|qa|prod)'
+        required: true
+        type: choice
+        options: [dev, qa, prod]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  determine:
+    name: Determine environment and AWS role
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set.outputs.environment }}
+      role_arn: ${{ steps.set.outputs.role_arn }}
+      cluster_name: ${{ steps.set.outputs.cluster_name }}
+      k8s_dir: ${{ steps.set.outputs.k8s_dir }}
+    steps:
+      - id: set
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ENV="${{ inputs.environment }}"
+          elif [ "${{ github.ref }}" = "refs/heads/develop" ]; then
+            ENV="dev"
+          elif [ "${{ github.ref }}" = "refs/heads/staging" ]; then
+            ENV="qa"
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            ENV="prod"
+          else
+            echo "Unsupported branch: ${{ github.ref }}" >&2
+            exit 1
+          fi
+          if [ "$ENV" = "prod" ]; then
+            ROLE_ARN="arn:aws:iam::346746763840:role/GH_EKS_Deploy_cb_prod_use1"
+            CLUSTER="cluckn-bell-prod"
+          else
+            # dev or qa
+            CLUSTER="cluckn-bell-nonprod"
+            if [ "$ENV" = "dev" ]; then
+              ROLE_ARN="arn:aws:iam::264765154707:role/GH_EKS_Deploy_cb_dev_use1"
+            else
+              ROLE_ARN="arn:aws:iam::264765154707:role/GH_EKS_Deploy_cb_qa_use1"
+            fi
+          fi
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+          echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
+          echo "cluster_name=$CLUSTER" >> $GITHUB_OUTPUT
+          echo "k8s_dir=k8s/$ENV" >> $GITHUB_OUTPUT
+
+  deploy:
+    name: Deploy ${{ needs.determine.outputs.environment }} manifests
+    runs-on: ubuntu-latest
+    needs: determine
+    environment: ${{ needs.determine.outputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ needs.determine.outputs.role_arn }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: gha-${{ github.run_id }}
+
+      - name: Setup kubectl 1.30
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.30.0
+
+      - name: Update kubeconfig for target cluster
+        run: |
+          aws eks update-kubeconfig \
+            --region ${{ env.AWS_REGION }} \
+            --name ${{ needs.determine.outputs.cluster_name }}
+
+      - name: Apply manifests
+        run: |
+          kubectl apply -f ${{ needs.determine.outputs.k8s_dir }}
