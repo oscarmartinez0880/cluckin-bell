@@ -53,3 +53,8 @@ spec:
           image: 346746763840.dkr.ecr.us-east-1.amazonaws.com/wingman-api:latest
           ports:
             - containerPort: 8080
+          env:
+            - name: ROOT_PATH
+              value: "/api"
+            - name: CMS_BASE_URL
+              value: "http://cms-svc."
