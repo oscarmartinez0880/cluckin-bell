@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- ../../platform/argocd/apps
+
+patchesStrategicMerge:
+- external-dns-values.yaml
+- cluster-autoscaler-values.yaml
+- kube-prometheus-stack-values.yaml
+- aws-for-fluent-bit-values.yaml
+
+# TODO: Enable when prod cluster is ready
+# Remove wordpress applications for now - enable later for main branch
+patches:
+- target:
+    name: wordpress-dev
+    kind: Application
+  patch: |-
+    $patch: delete
+- target:
+    name: wordpress-qa
+    kind: Application
+  patch: |-
+    $patch: delete

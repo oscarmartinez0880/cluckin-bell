@@ -1,0 +1,62 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: aws-for-fluent-bit
+  namespace: argocd
+spec:
+  source:
+    helm:
+      values: |
+        serviceAccount:
+          create: true
+          name: aws-for-fluent-bit
+          annotations:
+            eks.amazonaws.com/role-arn: arn:aws:iam::264765154707:role/cb-fluent-bit-role
+        cloudWatchLogs:
+          enabled: true
+          match: "*"
+          region: us-east-1
+          logGroupName: /eks/nonprod/apps
+          logGroupTemplate: /eks/nonprod/$kubernetes['namespace_name']
+          logStreamName: ${hostname}-flb
+          logStreamTemplate: $kubernetes['pod_name'].$kubernetes['container_name']
+          autoCreateGroup: true
+          logRetentionDays: 1
+        firehose:
+          enabled: false
+        kinesis:
+          enabled: false
+        elasticsearch:
+          enabled: false
+        cloudWatch:
+          enabled: false
+        input:
+          tail:
+            memBufLimit: 50MB
+            skipLongLines: "On"
+            refreshInterval: 10
+        filter:
+          kubeURL: https://kubernetes.default.svc:443
+          kubeCAFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          kubeTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+          kubeTagPrefix: kube.var.log.containers.
+          mergeLog: "On"
+          mergeLogKey: log_processed
+          keepLog: "Off"
+          k8sLoggingParser: "On"
+          k8sLoggingExclude: "Off"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 200Mi
+          limits:
+            cpu: 200m
+            memory: 400Mi
+        tolerations:
+          - key: node-role.kubernetes.io/master
+            operator: Exists
+            effect: NoSchedule
+          - operator: "Exists"
+            effect: "NoExecute"
+          - operator: "Exists"
+            effect: "NoSchedule"
