@@ -20,13 +20,16 @@ permissions:
 env:
   AWS_REGION: us-east-1
 
+concurrency:
+  group: deploy-${{ github.ref }}-${{ github.event.inputs.environment || '' }}
+  cancel-in-progress: false
+
 jobs:
   determine:
-    name: Determine environment and AWS role
+    name: Determine environment and cluster
     runs-on: ubuntu-latest
     outputs:
       environment: ${{ steps.set.outputs.environment }}
-      role_arn: ${{ steps.set.outputs.role_arn }}
       cluster_name: ${{ steps.set.outputs.cluster_name }}
       k8s_dir: ${{ steps.set.outputs.k8s_dir }}
     steps:
@@ -46,19 +49,12 @@ jobs:
             exit 1
           fi
           if [ "$ENV" = "prod" ]; then
-            ROLE_ARN="arn:aws:iam::346746763840:role/GH_EKS_Deploy_cb_prod_use1"
             CLUSTER="cluckn-bell-prod"
           else
             # dev or qa
             CLUSTER="cluckn-bell-nonprod"
-            if [ "$ENV" = "dev" ]; then
-              ROLE_ARN="arn:aws:iam::264765154707:role/GH_EKS_Deploy_cb_dev_use1"
-            else
-              ROLE_ARN="arn:aws:iam::264765154707:role/GH_EKS_Deploy_cb_qa_use1"
-            fi
           fi
           echo "environment=$ENV" >> $GITHUB_OUTPUT
-          echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
           echo "cluster_name=$CLUSTER" >> $GITHUB_OUTPUT
           echo "k8s_dir=k8s/$ENV" >> $GITHUB_OUTPUT
 
@@ -76,7 +72,7 @@ jobs:
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ needs.determine.outputs.role_arn }}
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: gha-${{ github.run_id }}
 
@@ -93,4 +89,4 @@ jobs:
 
       - name: Apply manifests
         run: |
-          kubectl apply -f ${{ needs.determine.outputs.k8s_dir }}
+          kubectl apply -f ${{ needs.determine.outputs.k8s_dir }}/ --recursive
