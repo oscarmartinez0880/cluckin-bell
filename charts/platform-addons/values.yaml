@@ -1,34 +1,89 @@
 # Default values for platform-addons
 # This is a YAML-formatted file.
-# Placeholder values for platform components managed by Terraform (Phase 1)
-
-# ALB Controller - placeholder (currently managed by Terraform)
-aws-load-balancer-controller:
-  enabled: false
-  # Will be enabled in Phase 2
-
-# ExternalDNS - placeholder (currently managed by Terraform)
-external-dns:
-  enabled: false
-  # Will be enabled in Phase 2
-
-# cert-manager - placeholder (currently managed by Terraform)
-cert-manager:
-  enabled: false
-  # Will be enabled in Phase 2
-
-# kube-prometheus-stack - placeholder (currently managed by Terraform)
-kube-prometheus-stack:
-  enabled: false
-  # Will be enabled in Phase 2
-
-# metrics-server - placeholder (currently managed by Terraform)
-metrics-server:
-  enabled: false
-  # Will be enabled in Phase 2
+# Phase 2 Bootstrap: All components disabled by default, managed externally until enabled
 
 # Global settings
 global:
   clusterName: ""
   region: "us-east-1"
   environment: ""
+  account: ""
+
+# Platform addon configurations (Phase 2 scaffold - all disabled by default)
+platformAddons:
+  # AWS Load Balancer Controller
+  awsLoadBalancerController:
+    enabled: false
+    namespace: aws-load-balancer-controller
+    chart:
+      repo: https://aws.github.io/eks-charts
+      name: aws-load-balancer-controller
+      version: 1.7.2
+    clusterName: CLUSTER_NAME_PLACEHOLDER
+    serviceAccount:
+      create: false
+      name: aws-load-balancer-controller
+      annotations:
+        eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/ROLE_ALB_CONTROLLER  # TODO: replace with real ARN from cluckin-bell-infra Terraform once created
+
+  # ExternalDNS
+  externalDNS:
+    enabled: false
+    namespace: external-dns
+    chart:
+      repo: https://kubernetes-sigs.github.io/external-dns/
+      name: external-dns
+      version: 1.14.5
+    serviceAccount:
+      create: false
+      name: external-dns
+      annotations:
+        eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/ROLE_EXTERNAL_DNS  # TODO: replace with real ARN from cluckin-bell-infra Terraform once created
+    txtOwnerId: PLACEHOLDER
+    domainFilters: []
+
+  # cert-manager
+  certManager:
+    enabled: false
+    namespace: cert-manager
+    chart:
+      repo: https://charts.jetstack.io
+      name: cert-manager
+      version: v1.15.3
+    installCRDs: true
+    serviceAccount:
+      annotations: {}
+      # Optional for DNS-01 challenges: eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/ROLE_CERT_MANAGER_DNS
+
+  # metrics-server (safe to enable by default if desired; will start disabled for consistency)
+  metricsServer:
+    enabled: false
+    chart:
+      repo: https://kubernetes-sigs.github.io/metrics-server/
+      name: metrics-server
+      version: 3.12.2
+
+  # kube-prometheus-stack (monitoring) - scaffold only, disabled
+  monitoring:
+    enabled: false
+    chart:
+      repo: https://prometheus-community.github.io/helm-charts
+      name: kube-prometheus-stack
+      version: 62.6.0
+
+# Legacy placeholder structure for backward compatibility (Phase 1)
+# These will be removed in Phase 3
+aws-load-balancer-controller:
+  enabled: false
+
+external-dns:
+  enabled: false
+
+cert-manager:
+  enabled: false
+
+kube-prometheus-stack:
+  enabled: false
+
+metrics-server:
+  enabled: false
