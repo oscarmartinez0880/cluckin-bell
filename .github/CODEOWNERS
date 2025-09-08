@@ -1,1 +1,7 @@
+# Production-sensitive paths requiring review
+values/env/prod.yaml     @oscarmartinez0880
+apps/*prod*              @oscarmartinez0880
+.github/CODEOWNERS       @oscarmartinez0880
+
+# Fallback - all other files
 * @oscarmartinez0880
