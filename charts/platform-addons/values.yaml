@@ -1,0 +1,34 @@
+# Default values for platform-addons
+# This is a YAML-formatted file.
+# Placeholder values for platform components managed by Terraform (Phase 1)
+
+# ALB Controller - placeholder (currently managed by Terraform)
+aws-load-balancer-controller:
+  enabled: false
+  # Will be enabled in Phase 2
+
+# ExternalDNS - placeholder (currently managed by Terraform)
+external-dns:
+  enabled: false
+  # Will be enabled in Phase 2
+
+# cert-manager - placeholder (currently managed by Terraform)
+cert-manager:
+  enabled: false
+  # Will be enabled in Phase 2
+
+# kube-prometheus-stack - placeholder (currently managed by Terraform)
+kube-prometheus-stack:
+  enabled: false
+  # Will be enabled in Phase 2
+
+# metrics-server - placeholder (currently managed by Terraform)
+metrics-server:
+  enabled: false
+  # Will be enabled in Phase 2
+
+# Global settings
+global:
+  clusterName: ""
+  region: "us-east-1"
+  environment: ""

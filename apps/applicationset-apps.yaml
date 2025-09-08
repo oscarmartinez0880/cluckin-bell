@@ -1,0 +1,68 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: cluckn-bell-apps
+  namespace: argocd
+  labels:
+    applicationset: cluckn-bell-apps
+spec:
+  generators:
+    - matrix:
+        generators:
+          # Environment generator
+          - list:
+              elements:
+                - environment: dev
+                  cluster: https://kubernetes.default.svc
+                  namespace: cluckn-bell-dev
+                - environment: qa
+                  cluster: https://kubernetes.default.svc
+                  namespace: cluckn-bell-qa
+                - environment: prod
+                  cluster: https://kubernetes.default.svc
+                  namespace: cluckn-bell-prod
+          # Application generator
+          - list:
+              elements:
+                - app: frontend
+                  chart: app-frontend
+                  port: 80
+                - app: wingman-api
+                  chart: app-wingman-api
+                  port: 8080
+  template:
+    metadata:
+      name: 'cluckn-bell-{{environment}}-{{app}}'
+      labels:
+        environment: '{{environment}}'
+        application: '{{app}}'
+        managed-by: applicationset
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/oscarmartinez0880/cluckin-bell
+        targetRevision: HEAD
+        path: charts/{{chart}}
+        helm:
+          valueFiles:
+            - ../../values/env/{{environment}}.yaml
+      destination:
+        server: '{{cluster}}'
+        namespace: '{{namespace}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+          allowEmpty: false
+        syncOptions:
+          - CreateNamespace=false  # Namespaces already exist
+          - PrunePropagationPolicy=foreground
+          - PruneLast=true
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m
+  syncPolicy:
+    preserveResourcesOnDeletion: true
