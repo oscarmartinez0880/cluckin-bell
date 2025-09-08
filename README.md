@@ -18,6 +18,24 @@ This repo contains Kubernetes resources and GitHub Actions deploy workflows for 
 
 For detailed migration information, see [docs/GITOPS_RESTRUCTURE.md](docs/GITOPS_RESTRUCTURE.md).
 
+## GitOps Branching Strategy
+
+This repository implements **Option 2: Branch-based promotion** for environment management:
+
+| Environment | Git Branch | Purpose |
+|-------------|------------|---------|
+| **dev** | `develop` | Development environment for active feature development |
+| **qa** | `develop` | QA/staging environment for testing features from develop |
+| **prod** | `main` | Production environment for stable, tested releases |
+
+### Key Principles:
+- Development environments (dev, qa) track the `develop` branch
+- Production environment (prod) tracks the `main` branch  
+- Changes flow: `develop` → `main` via pull requests
+- Production deployments only occur from validated `main` branch commits
+
+For complete branching documentation, see [docs/GITOPS_BRANCHING.md](docs/GITOPS_BRANCHING.md).
+
 ## Environments and clusters
 - dev and qa share a single EKS 1.30 cluster in AWS account 264765154707
   - Namespaces: cluckn-bell-dev, cluckn-bell-qa

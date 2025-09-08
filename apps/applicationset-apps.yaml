@@ -15,12 +15,15 @@ spec:
                 - environment: dev
                   cluster: https://kubernetes.default.svc
                   namespace: cluckn-bell-dev
+                  revision: develop
                 - environment: qa
                   cluster: https://kubernetes.default.svc
                   namespace: cluckn-bell-qa
+                  revision: develop
                 - environment: prod
                   cluster: https://kubernetes.default.svc
                   namespace: cluckn-bell-prod
+                  revision: main
           # Application generator
           - list:
               elements:
@@ -41,7 +44,7 @@ spec:
       project: default
       source:
         repoURL: https://github.com/oscarmartinez0880/cluckin-bell
-        targetRevision: HEAD
+        targetRevision: '{{revision}}'
         path: charts/{{chart}}
         helm:
           valueFiles:
