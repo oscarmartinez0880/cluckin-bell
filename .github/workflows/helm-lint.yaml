@@ -1,0 +1,66 @@
+name: Helm Lint and Template Validation
+
+on:
+  push:
+    branches: [develop, main]
+    paths:
+      - 'charts/**'
+      - 'values/**'
+      - '.github/workflows/helm-lint.yaml'
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - 'charts/**'
+      - 'values/**'
+      - '.github/workflows/helm-lint.yaml'
+
+jobs:
+  helm-lint:
+    name: Helm Lint and Template Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: '3.18.6'
+
+      - name: Lint Helm charts
+        run: |
+          echo "Linting Helm charts..."
+          helm lint charts/app-frontend
+          helm lint charts/app-wingman-api
+          helm lint charts/platform-addons
+
+      - name: Template rendering smoke test
+        run: |
+          echo "Testing Helm template rendering for each environment..."
+          
+          # Test app-frontend with each environment
+          echo "Testing app-frontend..."
+          helm template frontend charts/app-frontend -f values/env/dev.yaml > /dev/null
+          helm template frontend charts/app-frontend -f values/env/qa.yaml > /dev/null
+          helm template frontend charts/app-frontend -f values/env/prod.yaml > /dev/null
+          
+          # Test app-wingman-api with each environment
+          echo "Testing app-wingman-api..."
+          helm template wingman-api charts/app-wingman-api -f values/env/dev.yaml > /dev/null
+          helm template wingman-api charts/app-wingman-api -f values/env/qa.yaml > /dev/null
+          helm template wingman-api charts/app-wingman-api -f values/env/prod.yaml > /dev/null
+          
+          # Test platform-addons with platform values
+          echo "Testing platform-addons..."
+          helm template platform-addons charts/platform-addons -f values/platform/default.yaml > /dev/null
+          
+          echo "All template rendering tests passed!"
+
+      - name: Validate ApplicationSet syntax
+        run: |
+          echo "Validating ApplicationSet YAML syntax..."
+          # Use kubectl to validate YAML syntax (dry-run)
+          kubectl version --client
+          kubectl apply --dry-run=client -f apps/applicationset-apps.yaml
+          kubectl apply --dry-run=client -f apps/application-platform-addons.yaml
+          echo "ApplicationSet validation passed!"
