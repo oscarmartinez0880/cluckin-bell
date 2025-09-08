@@ -1,0 +1,48 @@
+# QA environment values
+# Override values for qa environment
+
+# Frontend configuration
+app-frontend:
+  image:
+    repository: 264765154707.dkr.ecr.us-east-1.amazonaws.com/cluckin-bell-app
+    tag: "qa"
+  
+  ingress:
+    enabled: false  # Will be enabled in Phase 2
+    annotations:
+      external-dns.alpha.kubernetes.io/hostname: qa.cluckn-bell.com
+    hosts:
+      - host: qa.cluckn-bell.com
+        paths:
+          - path: /
+            pathType: Prefix
+
+  # Use existing namespace and service account
+  namespaceOverride: "cluckn-bell-qa"
+
+# Wingman API configuration  
+app-wingman-api:
+  image:
+    repository: 264765154707.dkr.ecr.us-east-1.amazonaws.com/wingman-api
+    tag: "qa"
+  
+  ingress:
+    enabled: false  # Will be enabled in Phase 2
+    annotations:
+      external-dns.alpha.kubernetes.io/hostname: api.qa.cluckn-bell.com
+    hosts:
+      - host: api.qa.cluckn-bell.com
+        paths:
+          - path: /api
+            pathType: Prefix
+
+  # Use existing namespace and service account
+  namespaceOverride: "cluckn-bell-qa"
+
+# Platform add-ons configuration
+platform-addons:
+  global:
+    clusterName: "cluckn-bell-nonprod"
+    region: "us-east-1"
+    environment: "qa"
+    account: "264765154707"

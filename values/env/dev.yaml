@@ -1,0 +1,48 @@
+# Development environment values
+# Override values for dev environment
+
+# Frontend configuration
+app-frontend:
+  image:
+    repository: 264765154707.dkr.ecr.us-east-1.amazonaws.com/cluckin-bell-app
+    tag: "dev"
+  
+  ingress:
+    enabled: false  # Will be enabled in Phase 2
+    annotations:
+      external-dns.alpha.kubernetes.io/hostname: dev.cluckn-bell.com
+    hosts:
+      - host: dev.cluckn-bell.com
+        paths:
+          - path: /
+            pathType: Prefix
+
+  # Use existing namespace and service account
+  namespaceOverride: "cluckn-bell-dev"
+
+# Wingman API configuration  
+app-wingman-api:
+  image:
+    repository: 264765154707.dkr.ecr.us-east-1.amazonaws.com/wingman-api
+    tag: "dev"
+  
+  ingress:
+    enabled: false  # Will be enabled in Phase 2
+    annotations:
+      external-dns.alpha.kubernetes.io/hostname: api.dev.cluckn-bell.com
+    hosts:
+      - host: api.dev.cluckn-bell.com
+        paths:
+          - path: /api
+            pathType: Prefix
+
+  # Use existing namespace and service account
+  namespaceOverride: "cluckn-bell-dev"
+
+# Platform add-ons configuration
+platform-addons:
+  global:
+    clusterName: "cluckn-bell-nonprod"
+    region: "us-east-1"
+    environment: "dev"
+    account: "264765154707"

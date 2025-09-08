@@ -1,0 +1,16 @@
+Platform Add-ons Chart Deployed Successfully!
+
+This is a placeholder chart for Cluckin Bell platform components.
+
+Currently managed by Terraform:
+- AWS Load Balancer Controller
+- ExternalDNS
+- cert-manager
+- kube-prometheus-stack
+- metrics-server
+
+Phase 2 Migration Notes:
+In the next phase, these components will be migrated from Terraform to this Helm chart.
+All platform components are currently disabled and managed externally.
+
+For more information, see docs/GITOPS_RESTRUCTURE.md

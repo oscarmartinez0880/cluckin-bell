@@ -1,0 +1,24 @@
+# Default platform values
+# Values for platform-addons chart
+
+global:
+  clusterName: ""  # To be overridden by environment
+  region: "us-east-1"
+  environment: ""  # To be overridden by environment
+  account: ""      # To be overridden by environment
+
+# All platform components disabled by default (Phase 1 placeholder)
+aws-load-balancer-controller:
+  enabled: false
+
+external-dns:
+  enabled: false
+
+cert-manager:
+  enabled: false
+
+kube-prometheus-stack:
+  enabled: false
+
+metrics-server:
+  enabled: false
