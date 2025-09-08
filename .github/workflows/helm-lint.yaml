@@ -64,3 +64,7 @@ jobs:
           kubectl apply --dry-run=client -f apps/applicationset-apps.yaml
           kubectl apply --dry-run=client -f apps/application-platform-addons.yaml
           echo "ApplicationSet validation passed!"
+          
+          # TODO: Future enhancement - Add production diff validation
+          # This will enforce that production changes only come from 'main' branch
+          # See scripts/check-prod-diff.sh for planned implementation

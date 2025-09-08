@@ -34,7 +34,11 @@ This repository implements **Option 2: Branch-based promotion** for environment 
 - Changes flow: `develop` → `main` via pull requests
 - Production deployments only occur from validated `main` branch commits
 
-For complete branching documentation, see [docs/GITOPS_BRANCHING.md](docs/GITOPS_BRANCHING.md).
+### Code Review & Protection:
+- **CODEOWNERS enforcement**: Production-sensitive paths (`values/env/prod.yaml`, `apps/*prod*`) require review
+- **Promotion boundary**: Changes flow `develop` → `main` via pull requests with proper approvals
+
+For complete branching documentation, see [docs/GITOPS_BRANCHING.md](docs/GITOPS_BRANCHING.md) and [docs/GITOPS_RESTRUCTURE.md](docs/GITOPS_RESTRUCTURE.md).
 
 ## Environments and clusters
 - dev and qa share a single EKS 1.30 cluster in AWS account 264765154707
