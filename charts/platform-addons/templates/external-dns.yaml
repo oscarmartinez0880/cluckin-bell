@@ -1,0 +1,65 @@
+{{- if .Values.platformAddons.externalDNS.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: external-dns
+  namespace: argocd
+  labels:
+    {{- include "platform-addons.labels" . | nindent 4 }}
+    component: external-dns
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: {{ .Values.platformAddons.externalDNS.chart.repo | quote }}
+    chart: {{ .Values.platformAddons.externalDNS.chart.name | quote }}
+    targetRevision: {{ .Values.platformAddons.externalDNS.chart.version | quote }}
+    helm:
+      values: |
+        provider: {{ .Values.platformAddons.externalDNS.provider | default "aws" | quote }}
+        registry: {{ .Values.platformAddons.externalDNS.registry | default "txt" | quote }}
+        interval: {{ .Values.platformAddons.externalDNS.interval | default "1m" | quote }}
+        txtOwnerId: {{ .Values.platformAddons.externalDNS.txtOwnerId | quote }}
+        {{- if .Values.platformAddons.externalDNS.domainFilters }}
+        domainFilters:
+          {{- toYaml .Values.platformAddons.externalDNS.domainFilters | nindent 10 }}
+        {{- end }}
+        {{- if .Values.platformAddons.externalDNS.extraArgs }}
+        extraArgs:
+          {{- toYaml .Values.platformAddons.externalDNS.extraArgs | nindent 10 }}
+        {{- end }}
+        serviceAccount:
+          create: {{ .Values.platformAddons.externalDNS.serviceAccount.create | default true }}
+          name: {{ .Values.platformAddons.externalDNS.serviceAccount.name | default "external-dns" | quote }}
+          {{- if .Values.platformAddons.externalDNS.serviceAccount.annotations }}
+          annotations:
+            {{- toYaml .Values.platformAddons.externalDNS.serviceAccount.annotations | nindent 12 }}
+          {{- end }}
+        {{- if .Values.platformAddons.externalDNS.resources }}
+        resources:
+          {{- toYaml .Values.platformAddons.externalDNS.resources | nindent 10 }}
+        {{- end }}
+        {{- if .Values.platformAddons.externalDNS.securityContext }}
+        securityContext:
+          {{- toYaml .Values.platformAddons.externalDNS.securityContext | nindent 10 }}
+        {{- end }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: {{ .Values.platformAddons.externalDNS.namespace | default "external-dns" }}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+{{- end }}
