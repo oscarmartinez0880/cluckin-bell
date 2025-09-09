@@ -24,13 +24,15 @@ Components should be enabled in the following order to ensure proper dependencie
 
 ### IAM Roles (cluckin-bell-infra Terraform)
 
-The following IAM roles must be created in the `cluckin-bell-infra` repository before enabling components:
+The following IAM roles are created in the `cluckin-bell-infra` repository:
 
 | Component | IAM Role Name | Purpose |
 |-----------|---------------|---------|
-| AWS Load Balancer Controller | `ROLE_ALB_CONTROLLER` | Manage ALB/NLB resources |
-| ExternalDNS | `ROLE_EXTERNAL_DNS` | Manage Route53 DNS records |
-| cert-manager (optional) | `ROLE_CERT_MANAGER_DNS` | DNS-01 challenge validation |
+| AWS Load Balancer Controller | `cluckn-bell-{env}-aws-load-balancer-controller` | Manage ALB/NLB resources |
+| ExternalDNS | `cluckn-bell-{env}-external-dns` | Manage Route53 DNS records |
+| cert-manager (optional) | `cluckn-bell-{env}-cert-manager-dns` | DNS-01 challenge validation |
+
+**Note**: Replace `{env}` with `nonprod` or `prod` as appropriate.
 
 ### Environment-Specific Values Files
 
@@ -41,14 +43,116 @@ Platform components use environment-specific configuration:
 
 **Application Configuration**: The `apps/application-platform-addons.yaml` currently references `values/platform/default.yaml`. Once IAM roles are created and components are ready for enablement, update the Application to reference the appropriate environment-specific values file, or create separate Applications per cluster.
 
+## Step 1 – Migrate AWS Load Balancer Controller (Nonprod)
+
+### Rationale
+
+This step migrates the AWS Load Balancer Controller from Terraform management to the GitOps-managed platform-addons Helm chart for the nonprod cluster (shared dev/qa). This enables unified management of platform components through GitOps while maintaining production stability.
+
+The migration uses existing IRSA roles provisioned by the infrastructure repository:
+- **Nonprod**: `arn:aws:iam::264765154707:role/cluckn-bell-nonprod-aws-load-balancer-controller`
+- **Prod**: `arn:aws:iam::346746763840:role/cluckn-bell-prod-aws-load-balancer-controller`
+
+### Prerequisites
+
+1. **Disable Terraform-managed controller first** (CRITICAL):
+   ```bash
+   # In cluckin-bell-infra repository, edit terraform/clusters/devqa/main.tf
+   # Comment out or remove the aws_load_balancer_controller_devqa module:
+   # module "aws_load_balancer_controller_devqa" {
+   #   source = "../../modules/aws-load-balancer-controller"
+   #   ...
+   # }
+   
+   # Apply Terraform changes to remove the existing controller
+   cd terraform/clusters/devqa
+   terraform plan  # Verify it will remove the controller
+   terraform apply
+   ```
+
+2. **Verify removal**:
+   ```bash
+   kubectl -n kube-system get deployment aws-load-balancer-controller
+   # Should return "No resources found" or error
+   ```
+
+### Enablement
+
+The controller is already enabled in `values/platform/nonprod.yaml` with the correct configuration:
+- Namespace: `kube-system` (matching IRSA trust policy)
+- ServiceAccount: Helm-managed with proper IRSA annotation
+- Real IAM role ARN (no placeholders)
+
+### Validation Commands
+
+After Argo CD syncs the platform-addons application:
+
+```bash
+# 1. Verify Helm template rendering
+helm template platform-addons charts/platform-addons -f values/platform/nonprod.yaml | grep -i aws-load-balancer-controller
+
+# 2. Check controller deployment status
+kubectl -n kube-system get deployment aws-load-balancer-controller
+
+# 3. Verify controller is running and healthy
+kubectl -n kube-system get pods -l app.kubernetes.io/name=aws-load-balancer-controller
+
+# 4. Check controller logs for startup
+kubectl -n kube-system logs deploy/aws-load-balancer-controller | head
+
+# 5. Verify IRSA annotation is present
+kubectl -n kube-system get sa aws-load-balancer-controller -o yaml | grep -i role-arn
+
+# 6. Test ALB creation (optional)
+# Apply this test ingress, then delete it:
+# kubectl apply -f - <<EOF
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: test-alb
+#   namespace: default
+#   annotations:
+#     kubernetes.io/ingress.class: alb
+#     alb.ingress.kubernetes.io/scheme: internet-facing
+#     alb.ingress.kubernetes.io/target-type: ip
+# spec:
+#   rules:
+#   - host: test.dev.cluckn-bell.com
+#     http:
+#       paths:
+#       - path: /
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: kubernetes
+#             port:
+#               number: 443
+# EOF
+# 
+# # Verify ALB creation in AWS Console, then cleanup:
+# kubectl delete ingress test-alb
+```
+
+### Rollback Instructions
+
+If issues occur, immediately disable the controller:
+
+```bash
+# 1. Set enabled: false in values/platform/nonprod.yaml
+# 2. Commit and push changes
+git add values/platform/nonprod.yaml
+git commit -m "ROLLBACK: Disable AWS Load Balancer Controller"
+git push origin main
+
+# 3. If needed, re-enable Terraform module in cluckin-bell-infra
+# Uncomment the aws_load_balancer_controller_devqa module and apply
+```
+
 ## Enablement Process
 
 ### Step 1: Prepare IAM Roles
 
-1. Create IAM roles in `cluckin-bell-infra` Terraform
-2. Update placeholder ARNs in platform values files:
-   - Replace `arn:aws:iam::ACCOUNT_ID:role/ROLE_ALB_CONTROLLER`
-   - Replace `arn:aws:iam::ACCOUNT_ID:role/ROLE_EXTERNAL_DNS`
+✅ **COMPLETED**: IAM roles have been created in `cluckin-bell-infra` Terraform and placeholder ARNs have been updated in platform values files.
 
 ### Step 2: Enable Component
 

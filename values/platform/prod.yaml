@@ -10,17 +10,17 @@ global:
 platformAddons:
   awsLoadBalancerController:
     enabled: false
-    namespace: aws-load-balancer-controller
+    namespace: kube-system
     chart:
       repo: https://aws.github.io/eks-charts
       name: aws-load-balancer-controller
       version: 1.7.2
     clusterName: cluckn-bell-prod
     serviceAccount:
-      create: false
+      create: true
       name: aws-load-balancer-controller
       annotations:
-        eks.amazonaws.com/role-arn: arn:aws:iam::346746763840:role/ROLE_ALB_CONTROLLER  # TODO: replace with real ARN from cluckin-bell-infra Terraform once created
+        eks.amazonaws.com/role-arn: arn:aws:iam::346746763840:role/cluckn-bell-prod-aws-load-balancer-controller
 
   externalDNS:
     enabled: false

@@ -21,6 +21,6 @@ For enablement instructions, see docs/PLATFORM_ADDONS_MIGRATION.md
 For complete migration information, see docs/GITOPS_RESTRUCTURE.md
 
 IAM Role Requirements:
-- ROLE_ALB_CONTROLLER (TODO: create in cluckin-bell-infra Terraform)
+- ✅ cluckn-bell-{env}-aws-load-balancer-controller (created in cluckin-bell-infra Terraform)
 - ROLE_EXTERNAL_DNS (TODO: create in cluckin-bell-infra Terraform)
 - ROLE_CERT_MANAGER_DNS (Optional, for DNS-01 challenges)

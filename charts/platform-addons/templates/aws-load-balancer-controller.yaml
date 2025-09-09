@@ -1,0 +1,65 @@
+{{- if .Values.platformAddons.awsLoadBalancerController.enabled }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.platformAddons.awsLoadBalancerController.namespace }}
+  labels:
+    name: {{ .Values.platformAddons.awsLoadBalancerController.namespace }}
+    {{- include "platform-addons.labels" . | nindent 4 }}
+{{- if .Values.platformAddons.awsLoadBalancerController.serviceAccount.create }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.platformAddons.awsLoadBalancerController.serviceAccount.name }}
+  namespace: {{ .Values.platformAddons.awsLoadBalancerController.namespace }}
+  labels:
+    {{- include "platform-addons.labels" . | nindent 4 }}
+  annotations:
+    {{- toYaml .Values.platformAddons.awsLoadBalancerController.serviceAccount.annotations | nindent 4 }}
+{{- end }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: aws-load-balancer-controller
+  namespace: argocd
+  labels:
+    {{- include "platform-addons.labels" . | nindent 4 }}
+    component: aws-load-balancer-controller
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: {{ .Values.platformAddons.awsLoadBalancerController.chart.repo }}
+    chart: {{ .Values.platformAddons.awsLoadBalancerController.chart.name }}
+    targetRevision: {{ .Values.platformAddons.awsLoadBalancerController.chart.version }}
+    helm:
+      values: |
+        clusterName: {{ .Values.platformAddons.awsLoadBalancerController.clusterName }}
+        serviceAccount:
+          create: false
+          name: {{ .Values.platformAddons.awsLoadBalancerController.serviceAccount.name }}
+        region: {{ .Values.global.region }}
+        vpcId: ""  # Will be auto-discovered
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: {{ .Values.platformAddons.awsLoadBalancerController.namespace }}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+{{- end }}

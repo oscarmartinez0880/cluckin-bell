@@ -24,7 +24,7 @@ platformAddons:
       create: false
       name: aws-load-balancer-controller
       annotations:
-        eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/ROLE_ALB_CONTROLLER  # TODO: replace with real ARN from cluckin-bell-infra Terraform once created
+        eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/cluckn-bell-ENV-aws-load-balancer-controller  # Replace ACCOUNT_ID and ENV with actual values
 
   # ExternalDNS
   externalDNS:
