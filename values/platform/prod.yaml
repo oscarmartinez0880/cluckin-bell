@@ -1,0 +1,30 @@
+# Platform values for prod environment
+# Values for platform-addons chart
+
+global:
+  clusterName: "cluckn-bell-prod"
+  region: "us-east-1"
+  environment: "prod"
+  account: "346746763840"
+
+# Platform Add-ons Configuration
+platformAddons:
+  # AWS Load Balancer Controller - Disabled for prod (Step 1 is nonprod only)
+  awsLoadBalancerController:
+    enabled: false
+    
+  # ExternalDNS - Disabled for now (Phase 2 Step 2)
+  externalDns:
+    enabled: false
+    
+  # cert-manager - Disabled for now (Phase 2 Step 3)
+  certManager:
+    enabled: false
+    
+  # kube-prometheus-stack - Disabled for now (Phase 2 Step 4)
+  kubePrometheusStack:
+    enabled: false
+    
+  # metrics-server - Disabled for now (Phase 2 Step 5)
+  metricsServer:
+    enabled: false

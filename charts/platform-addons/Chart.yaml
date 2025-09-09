@@ -9,3 +9,10 @@ version: 0.1.0
 
 # This is the version number of the application being deployed
 appVersion: "1.0.0"
+
+# Dependencies will be added in Phase 2 implementation
+# dependencies:
+#   - name: aws-load-balancer-controller
+#     version: "1.7.1"
+#     repository: "https://aws.github.io/eks-charts"
+#     condition: platformAddons.awsLoadBalancerController.enabled
