@@ -20,7 +20,7 @@ spec:
         - ../../values/platform/nonprod.yaml
   destination:
     server: https://kubernetes.default.svc
-    namespace: argocd  # Platform components will be deployed to their own namespaces when enabled
+    namespace: argocd
   syncPolicy:
     automated:
       prune: true
@@ -59,7 +59,7 @@ spec:
         - ../../values/platform/prod.yaml
   destination:
     server: https://kubernetes.default.svc
-    namespace: argocd  # Platform components will be deployed to their own namespaces when enabled
+    namespace: argocd
   syncPolicy:
     automated:
       prune: true

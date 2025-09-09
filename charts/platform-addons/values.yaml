@@ -1,51 +1,69 @@
-# Default values for platform-addons
-# This is a YAML-formatted file.
-# Placeholder values for platform components managed by Terraform (Phase 1)
+# Default/base values (Phase 2 scaffold). All components disabled here.
+# Environment-specific enablement is done in values/platform/<env>.yaml
 
-# Global settings
 global:
   clusterName: ""
   region: "us-east-1"
   environment: ""
+  account: ""
 
-# Platform Add-ons Configuration
 platformAddons:
-  # AWS Load Balancer Controller - placeholder (will be enabled in Phase 2)
   awsLoadBalancerController:
     enabled: false
-    # Will be enabled in Phase 2
-
-  # ExternalDNS - placeholder (currently managed by Terraform)  
-  externalDns:
+    namespace: kube-system
+    chart:
+      repo: https://aws.github.io/eks-charts
+      name: aws-load-balancer-controller
+      version: 1.7.2
+    clusterName: ""
+    serviceAccount:
+      create: true
+      name: aws-load-balancer-controller
+      annotations: {}
+  externalDNS:
     enabled: false
-    # Will be enabled in Phase 2
-
-  # cert-manager - placeholder (currently managed by Terraform)
+    namespace: external-dns
+    chart:
+      repo: https://kubernetes-sigs.github.io/external-dns/
+      name: external-dns
+      version: 1.14.5
+    serviceAccount:
+      create: true
+      name: external-dns
+      annotations: {}
+    txtOwnerId: ""
+    domainFilters: []
   certManager:
     enabled: false
-    # Will be enabled in Phase 2
-
-  # kube-prometheus-stack - placeholder (currently managed by Terraform)
-  kubePrometheusStack:
-    enabled: false
-    # Will be enabled in Phase 2
-
-  # metrics-server - placeholder (currently managed by Terraform)
+    namespace: cert-manager
+    chart:
+      repo: https://charts.jetstack.io
+      name: cert-manager
+      version: v1.15.3
+    installCRDs: true
+    serviceAccount:
+      annotations: {}
   metricsServer:
     enabled: false
-    # Will be enabled in Phase 2
+    chart:
+      repo: https://kubernetes-sigs.github.io/metrics-server/
+      name: metrics-server
+      version: 3.12.2
+  monitoring:
+    enabled: false
+    chart:
+      repo: https://prometheus-community.github.io/helm-charts
+      name: kube-prometheus-stack
+      version: 62.6.0
 
-# AWS Load Balancer Controller configuration (passed to subchart)
+# Legacy compatibility toggles (will be removed later)
 aws-load-balancer-controller:
-  clusterName: ""
-  region: us-east-1
-  serviceAccount:
-    create: true
-    name: aws-load-balancer-controller
-  resources:
-    requests:
-      cpu: 100m
-      memory: 200Mi
-    limits:
-      cpu: 200m
-      memory: 500Mi
+  enabled: false
+external-dns:
+  enabled: false
+cert-manager:
+  enabled: false
+kube-prometheus-stack:
+  enabled: false
+metrics-server:
+  enabled: false

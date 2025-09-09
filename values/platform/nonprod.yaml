@@ -1,59 +1,63 @@
-# Platform values for nonprod (shared dev/qa) environment
-# Values for platform-addons chart
-
+# Nonprod (shared dev + qa) platform add-ons
 global:
   clusterName: "cluckn-bell-nonprod"
   region: "us-east-1"
   environment: "nonprod"
   account: "264765154707"
 
-# Platform Add-ons Configuration
 platformAddons:
-  # AWS Load Balancer Controller - Step 1: Enable for nonprod
   awsLoadBalancerController:
     enabled: true
     namespace: kube-system
+    chart:
+      repo: https://aws.github.io/eks-charts
+      name: aws-load-balancer-controller
+      version: 1.7.2
+    clusterName: cluckn-bell-nonprod
     serviceAccount:
-      create: false
+      create: true
       name: aws-load-balancer-controller
       annotations:
-        eks.amazonaws.com/role-arn: "arn:aws:iam::264765154707:role/cluckn-bell-nonprod-aws-load-balancer-controller"
-    clusterName: "cluckn-bell-nonprod"
-    region: "us-east-1"
-    
-  # ExternalDNS - Disabled for now (Phase 2 Step 2)
-  externalDns:
+        eks.amazonaws.com/role-arn: arn:aws:iam::264765154707:role/cluckn-bell-nonprod-aws-load-balancer-controller
+
+  externalDNS:
     enabled: false
-    
-  # cert-manager - Disabled for now (Phase 2 Step 3)
+    namespace: external-dns
+    chart:
+      repo: https://kubernetes-sigs.github.io/external-dns/
+      name: external-dns
+      version: 1.14.5
+    serviceAccount:
+      create: true
+      name: external-dns
+      annotations: {}
+    txtOwnerId: cluckn-bell-nonprod
+    domainFilters:
+      - dev.cluckn-bell.com
+      - qa.cluckn-bell.com
+      - internal.nonprod.cluckn-bell.com
+
   certManager:
     enabled: false
-    
-  # kube-prometheus-stack - Disabled for now (Phase 2 Step 4)
-  kubePrometheusStack:
-    enabled: false
-    
-  # metrics-server - Disabled for now (Phase 2 Step 5)
+    namespace: cert-manager
+    chart:
+      repo: https://charts.jetstack.io
+      name: cert-manager
+      version: v1.15.3
+    installCRDs: true
+    serviceAccount:
+      annotations: {}
+
   metricsServer:
     enabled: false
+    chart:
+      repo: https://kubernetes-sigs.github.io/metrics-server/
+      name: metrics-server
+      version: 3.12.2
 
-# AWS Load Balancer Controller configuration (passed to subchart)
-aws-load-balancer-controller:
-  clusterName: "cluckn-bell-nonprod"
-  region: "us-east-1"
-  serviceAccount:
-    create: false
-    name: aws-load-balancer-controller
-    annotations:
-      eks.amazonaws.com/role-arn: "arn:aws:iam::264765154707:role/cluckn-bell-nonprod-aws-load-balancer-controller"
-  resources:
-    requests:
-      cpu: 100m
-      memory: 200Mi
-    limits:
-      cpu: 200m
-      memory: 500Mi
-  enableServiceMutatorWebhook: false
-  enableShield: false
-  enableWaf: false
-  enableWafv2: false
+  monitoring:
+    enabled: false
+    chart:
+      repo: https://prometheus-community.github.io/helm-charts
+      name: kube-prometheus-stack
+      version: 62.6.0
