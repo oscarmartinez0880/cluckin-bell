@@ -1,6 +1,4 @@
-# Production platform values
-# Values for platform-addons chart targeting cluckn-bell-prod cluster
-
+# Production platform add-ons (still disabled in Step 1)
 global:
   clusterName: "cluckn-bell-prod"
   region: "us-east-1"
@@ -30,14 +28,13 @@ platformAddons:
       name: external-dns
       version: 1.14.5
     serviceAccount:
-      create: false
+      create: true
       name: external-dns
-      annotations:
-        eks.amazonaws.com/role-arn: arn:aws:iam::346746763840:role/ROLE_EXTERNAL_DNS  # TODO: replace with real ARN from cluckin-bell-infra Terraform once created
+      annotations: {}
     txtOwnerId: cluckn-bell-prod
     domainFilters:
-      - "cluckn-bell.com"
-      - "internal.prod.cluckn-bell.com"
+      - cluckn-bell.com
+      - internal.prod.cluckn-bell.com
 
   certManager:
     enabled: false
@@ -49,7 +46,6 @@ platformAddons:
     installCRDs: true
     serviceAccount:
       annotations: {}
-      # Optional for DNS-01 challenges: eks.amazonaws.com/role-arn: arn:aws:iam::346746763840:role/ROLE_CERT_MANAGER_DNS
 
   metricsServer:
     enabled: false

@@ -1,10 +1,11 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: cluckn-bell-platform-addons
+  name: cluckn-bell-platform-addons-nonprod
   namespace: argocd
   labels:
     application: platform-addons
+    environment: nonprod
     managed-by: gitops
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -16,15 +17,49 @@ spec:
     path: charts/platform-addons
     helm:
       valueFiles:
-        - ../../values/platform/default.yaml
-        # Phase 2 TODO: Switch to environment-specific values files:
-        # - ../../values/platform/nonprod.yaml (for dev + qa cluster)
-        # - ../../values/platform/prod.yaml (for prod cluster)
-        # Until multi-cluster Applications are introduced, this will require
-        # manual switching or separate Application per cluster
+        - ../../values/platform/nonprod.yaml
   destination:
     server: https://kubernetes.default.svc
-    namespace: argocd  # Platform components will be deployed to their own namespaces when enabled
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cluckn-bell-platform-addons-prod
+  namespace: argocd
+  labels:
+    application: platform-addons
+    environment: prod
+    managed-by: gitops
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/oscarmartinez0880/cluckin-bell
+    targetRevision: HEAD
+    path: charts/platform-addons
+    helm:
+      valueFiles:
+        - ../../values/platform/prod.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
   syncPolicy:
     automated:
       prune: true

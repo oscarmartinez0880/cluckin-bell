@@ -1,6 +1,4 @@
-# Nonprod platform values (dev + qa cluster)
-# Values for platform-addons chart targeting cluckn-bell-nonprod cluster
-
+# Nonprod (shared dev + qa) platform add-ons
 global:
   clusterName: "cluckn-bell-nonprod"
   region: "us-east-1"
@@ -30,15 +28,14 @@ platformAddons:
       name: external-dns
       version: 1.14.5
     serviceAccount:
-      create: false
+      create: true
       name: external-dns
-      annotations:
-        eks.amazonaws.com/role-arn: arn:aws:iam::264765154707:role/ROLE_EXTERNAL_DNS  # TODO: replace with real ARN from cluckin-bell-infra Terraform once created
+      annotations: {}
     txtOwnerId: cluckn-bell-nonprod
     domainFilters:
-      - "dev.cluckn-bell.com"
-      - "qa.cluckn-bell.com"
-      - "internal.nonprod.cluckn-bell.com"
+      - dev.cluckn-bell.com
+      - qa.cluckn-bell.com
+      - internal.nonprod.cluckn-bell.com
 
   certManager:
     enabled: false
@@ -50,7 +47,6 @@ platformAddons:
     installCRDs: true
     serviceAccount:
       annotations: {}
-      # Optional for DNS-01 challenges: eks.amazonaws.com/role-arn: arn:aws:iam::264765154707:role/ROLE_CERT_MANAGER_DNS
 
   metricsServer:
     enabled: false

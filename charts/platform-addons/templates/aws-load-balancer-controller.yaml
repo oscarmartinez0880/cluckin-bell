@@ -1,25 +1,4 @@
 {{- if .Values.platformAddons.awsLoadBalancerController.enabled }}
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: {{ .Values.platformAddons.awsLoadBalancerController.namespace }}
-  labels:
-    name: {{ .Values.platformAddons.awsLoadBalancerController.namespace }}
-    {{- include "platform-addons.labels" . | nindent 4 }}
-{{- if .Values.platformAddons.awsLoadBalancerController.serviceAccount.create }}
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: {{ .Values.platformAddons.awsLoadBalancerController.serviceAccount.name }}
-  namespace: {{ .Values.platformAddons.awsLoadBalancerController.namespace }}
-  labels:
-    {{- include "platform-addons.labels" . | nindent 4 }}
-  annotations:
-    {{- toYaml .Values.platformAddons.awsLoadBalancerController.serviceAccount.annotations | nindent 4 }}
-{{- end }}
----
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -33,20 +12,34 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: {{ .Values.platformAddons.awsLoadBalancerController.chart.repo }}
-    chart: {{ .Values.platformAddons.awsLoadBalancerController.chart.name }}
-    targetRevision: {{ .Values.platformAddons.awsLoadBalancerController.chart.version }}
+    repoURL: {{ .Values.platformAddons.awsLoadBalancerController.chart.repo | quote }}
+    chart: {{ .Values.platformAddons.awsLoadBalancerController.chart.name | quote }}
+    targetRevision: {{ .Values.platformAddons.awsLoadBalancerController.chart.version | quote }}
     helm:
       values: |
-        clusterName: {{ .Values.platformAddons.awsLoadBalancerController.clusterName }}
+        clusterName: {{ (.Values.platformAddons.awsLoadBalancerController.clusterName | default .Values.global.clusterName) | quote }}
+        region: {{ .Values.global.region | quote }}
         serviceAccount:
-          create: false
-          name: {{ .Values.platformAddons.awsLoadBalancerController.serviceAccount.name }}
-        region: {{ .Values.global.region }}
-        vpcId: ""  # Will be auto-discovered
+          create: {{ .Values.platformAddons.awsLoadBalancerController.serviceAccount.create | default false }}
+          name: {{ .Values.platformAddons.awsLoadBalancerController.serviceAccount.name | default "aws-load-balancer-controller" | quote }}
+          {{- if .Values.platformAddons.awsLoadBalancerController.serviceAccount.annotations }}
+          annotations:
+            {{- toYaml .Values.platformAddons.awsLoadBalancerController.serviceAccount.annotations | nindent 12 }}
+          {{- end }}
+        enableServiceMutatorWebhook: false
+        enableShield: false
+        enableWaf: false
+        enableWafv2: false
+        resources:
+          requests:
+            cpu: 100m
+            memory: 200Mi
+          limits:
+            cpu: 200m
+            memory: 500Mi
   destination:
     server: https://kubernetes.default.svc
-    namespace: {{ .Values.platformAddons.awsLoadBalancerController.namespace }}
+    namespace: {{ .Values.platformAddons.awsLoadBalancerController.namespace | default "kube-system" }}
   syncPolicy:
     automated:
       prune: true
