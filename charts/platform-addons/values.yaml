@@ -1,32 +1,25 @@
-# Default values for platform-addons
-# This is a YAML-formatted file.
-# Phase 2 Bootstrap: All components disabled by default, managed externally until enabled
+# Default/base values (Phase 2 scaffold). All components disabled here.
+# Environment-specific enablement is done in values/platform/<env>.yaml
 
-# Global settings
 global:
   clusterName: ""
   region: "us-east-1"
   environment: ""
   account: ""
 
-# Platform addon configurations (Phase 2 scaffold - all disabled by default)
 platformAddons:
-  # AWS Load Balancer Controller
   awsLoadBalancerController:
     enabled: false
-    namespace: aws-load-balancer-controller
+    namespace: kube-system
     chart:
       repo: https://aws.github.io/eks-charts
       name: aws-load-balancer-controller
       version: 1.7.2
-    clusterName: CLUSTER_NAME_PLACEHOLDER
+    clusterName: ""
     serviceAccount:
-      create: false
+      create: true
       name: aws-load-balancer-controller
-      annotations:
-        eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/ROLE_ALB_CONTROLLER  # TODO: replace with real ARN from cluckin-bell-infra Terraform once created
-
-  # ExternalDNS
+      annotations: {}
   externalDNS:
     enabled: false
     namespace: external-dns
@@ -35,14 +28,11 @@ platformAddons:
       name: external-dns
       version: 1.14.5
     serviceAccount:
-      create: false
+      create: true
       name: external-dns
-      annotations:
-        eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/ROLE_EXTERNAL_DNS  # TODO: replace with real ARN from cluckin-bell-infra Terraform once created
-    txtOwnerId: PLACEHOLDER
+      annotations: {}
+    txtOwnerId: ""
     domainFilters: []
-
-  # cert-manager
   certManager:
     enabled: false
     namespace: cert-manager
@@ -53,17 +43,12 @@ platformAddons:
     installCRDs: true
     serviceAccount:
       annotations: {}
-      # Optional for DNS-01 challenges: eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/ROLE_CERT_MANAGER_DNS
-
-  # metrics-server (safe to enable by default if desired; will start disabled for consistency)
   metricsServer:
     enabled: false
     chart:
       repo: https://kubernetes-sigs.github.io/metrics-server/
       name: metrics-server
       version: 3.12.2
-
-  # kube-prometheus-stack (monitoring) - scaffold only, disabled
   monitoring:
     enabled: false
     chart:
@@ -71,19 +56,14 @@ platformAddons:
       name: kube-prometheus-stack
       version: 62.6.0
 
-# Legacy placeholder structure for backward compatibility (Phase 1)
-# These will be removed in Phase 3
+# Legacy compatibility toggles (will be removed later)
 aws-load-balancer-controller:
   enabled: false
-
 external-dns:
   enabled: false
-
 cert-manager:
   enabled: false
-
 kube-prometheus-stack:
   enabled: false
-
 metrics-server:
   enabled: false
