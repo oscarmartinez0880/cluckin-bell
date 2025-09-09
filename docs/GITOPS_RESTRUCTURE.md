@@ -18,12 +18,13 @@ This document outlines the phased migration from raw Kubernetes manifests and Te
 | Phase | Status | Description | Deliverables |
 |-------|--------|-------------|--------------|
 | **Phase 0** | ✅ Complete | Infrastructure & Argo CD Bootstrap | EKS clusters, Argo CD installation, app-of-apps pattern |
-| **Phase 1** | 🟡 In Progress | Helm Charts + ApplicationSets (Non-breaking) | Helm charts, ApplicationSets, parallel structure |
-| **Phase 2** | ⏳ Planned | Platform Component Migration | Migrate ALB Controller, ExternalDNS, cert-manager from Terraform |
-| **Phase 3** | ⏳ Planned | Legacy Manifest Removal | Remove k8s/ directories, test parity |
-| **Phase 4** | ⏳ Planned | IAM Role Consolidation | Streamline IRSA roles, update workflows |
-| **Phase 5** | ⏳ Planned | Image Updater Integration | Automated image tag updates |
-| **Phase 6** | ⏳ Planned | Karpenter Migration | Move from Cluster Autoscaler to Karpenter |
+| **Phase 1** | ✅ Complete | Helm Charts + ApplicationSets (Non-breaking) | Helm charts, ApplicationSets, parallel structure |
+| **Phase 2** | 🟡 In Progress | Platform Component Migration Bootstrap | Scaffold + env-specific values, K8s 1.34.0 target, migration docs |
+| **Phase 3** | ⏳ Planned | Platform Component Enablement | Enable ALB Controller, ExternalDNS, cert-manager individually |
+| **Phase 4** | ⏳ Planned | Legacy Manifest Removal | Remove k8s/ directories, test parity |
+| **Phase 5** | ⏳ Planned | IAM Role Consolidation | Streamline IRSA roles, update workflows |
+| **Phase 6** | ⏳ Planned | Image Updater Integration | Automated image tag updates |
+| **Phase 7** | ⏳ Planned | Karpenter Migration | Move from Cluster Autoscaler to Karpenter |
 
 ## Phase 1 Implementation Details
 
@@ -33,7 +34,7 @@ This document outlines the phased migration from raw Kubernetes manifests and Te
 charts/
 ├── app-frontend/          # Helm chart for drumstick-web (frontend)
 ├── app-wingman-api/       # Helm chart for wingman-api (backend)
-└── platform-addons/      # Umbrella chart for platform components (placeholder)
+└── platform-addons/      # Umbrella chart for platform components (Phase 2 scaffold)
 
 values/
 ├── env/
@@ -41,7 +42,9 @@ values/
 │   ├── qa.yaml           # QA environment values
 │   └── prod.yaml         # Production environment values
 └── platform/
-    └── default.yaml      # Platform add-ons values
+    ├── nonprod.yaml      # Platform add-ons values (dev + qa cluster)
+    ├── prod.yaml         # Platform add-ons values (prod cluster) 
+    └── default.yaml      # Platform add-ons values (legacy)
 
 apps/
 ├── applicationset-apps.yaml          # ApplicationSet for frontend + wingman-api
@@ -66,10 +69,12 @@ apps/
 - **Environment Variables**: `ROOT_PATH=/api`, `CMS_BASE_URL=http://cms-svc.`
 - **Ingress**: Optional, ALB-ready annotations (disabled by default)
 
-#### platform-addons (Placeholder)
+#### platform-addons (Phase 2 Bootstrap)
 - **Components**: ALB Controller, ExternalDNS, cert-manager, kube-prometheus-stack, metrics-server
-- **Status**: All disabled (managed by Terraform in Phase 1)
-- **Purpose**: Framework for Phase 2 migration
+- **Status**: Scaffold available, all disabled by default (managed by Terraform until individually enabled)
+- **Values Files**: Environment-specific (`nonprod.yaml`, `prod.yaml`) with IRSA placeholders
+- **Target Kubernetes Version**: 1.34.0 (minimum 1.30)
+- **IAM Dependencies**: Requires roles from cluckin-bell-infra Terraform before enablement
 
 ### ApplicationSet Configuration
 
@@ -162,17 +167,27 @@ Since Phase 1 is additive only:
 - [x] Validate Helm chart linting
 - [x] Test template rendering with environment values
 - [x] Document migration phases and procedures
-- [ ] Update README.md with new structure references
+- [x] Update README.md with new structure references
 
-### Phase 2 (Next)
-- [ ] Migrate AWS Load Balancer Controller from Terraform to platform-addons chart
-- [ ] Migrate ExternalDNS from Terraform to platform-addons chart
-- [ ] Migrate cert-manager from Terraform to platform-addons chart  
-- [ ] Migrate monitoring stack from Terraform to platform-addons chart
+### Phase 2 Bootstrap (Current)
+- [x] Create environment-specific platform values files (nonprod.yaml, prod.yaml)
+- [x] Expand platform-addons chart with configurable component sections
+- [x] Add IRSA ServiceAccount annotation placeholders
+- [x] Create PLATFORM_ADDONS_MIGRATION.md documentation
+- [x] Update documentation with Phase 2 initiation and K8s 1.34.0 target
+- [ ] Create IAM roles in cluckin-bell-infra Terraform repository
+- [ ] Update application-platform-addons.yaml for environment-specific values
+
+### Phase 3 (Next)
+- [ ] Enable AWS Load Balancer Controller (nonprod, then prod)
+- [ ] Enable ExternalDNS (nonprod, then prod)
+- [ ] Enable cert-manager (nonprod, then prod)
+- [ ] Enable metrics-server (nonprod, then prod)
+- [ ] Enable monitoring stack (nonprod, then prod)
 - [ ] Enable ingress in application charts
-- [ ] Deploy and test ApplicationSets in staging environment
+- [ ] Validate all platform components working correctly
 
-### Phase 3 (Later)
+### Phase 4 (Later)
 - [ ] Validate parity between Helm and legacy manifest deployments
 - [ ] Remove legacy k8s/ directories
 - [ ] Update CI/CD workflows to trigger Argo CD syncs instead of kubectl applies

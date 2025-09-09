@@ -1,0 +1,67 @@
+# Nonprod platform values (dev + qa cluster)
+# Values for platform-addons chart targeting cluckn-bell-nonprod cluster
+
+global:
+  clusterName: "cluckn-bell-nonprod"
+  region: "us-east-1"
+  environment: "nonprod"
+  account: "264765154707"
+
+platformAddons:
+  awsLoadBalancerController:
+    enabled: false
+    namespace: aws-load-balancer-controller
+    chart:
+      repo: https://aws.github.io/eks-charts
+      name: aws-load-balancer-controller
+      version: 1.7.2
+    clusterName: cluckn-bell-nonprod
+    serviceAccount:
+      create: false
+      name: aws-load-balancer-controller
+      annotations:
+        eks.amazonaws.com/role-arn: arn:aws:iam::264765154707:role/ROLE_ALB_CONTROLLER  # TODO: replace with real ARN from cluckin-bell-infra Terraform once created
+
+  externalDNS:
+    enabled: false
+    namespace: external-dns
+    chart:
+      repo: https://kubernetes-sigs.github.io/external-dns/
+      name: external-dns
+      version: 1.14.5
+    serviceAccount:
+      create: false
+      name: external-dns
+      annotations:
+        eks.amazonaws.com/role-arn: arn:aws:iam::264765154707:role/ROLE_EXTERNAL_DNS  # TODO: replace with real ARN from cluckin-bell-infra Terraform once created
+    txtOwnerId: cluckn-bell-nonprod
+    domainFilters:
+      - "dev.cluckn-bell.com"
+      - "qa.cluckn-bell.com"
+      - "internal.nonprod.cluckn-bell.com"
+
+  certManager:
+    enabled: false
+    namespace: cert-manager
+    chart:
+      repo: https://charts.jetstack.io
+      name: cert-manager
+      version: v1.15.3
+    installCRDs: true
+    serviceAccount:
+      annotations: {}
+      # Optional for DNS-01 challenges: eks.amazonaws.com/role-arn: arn:aws:iam::264765154707:role/ROLE_CERT_MANAGER_DNS
+
+  metricsServer:
+    enabled: false
+    chart:
+      repo: https://kubernetes-sigs.github.io/metrics-server/
+      name: metrics-server
+      version: 3.12.2
+
+  monitoring:
+    enabled: false
+    chart:
+      repo: https://prometheus-community.github.io/helm-charts
+      name: kube-prometheus-stack
+      version: 62.6.0

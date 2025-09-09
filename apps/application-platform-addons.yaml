@@ -17,6 +17,11 @@ spec:
     helm:
       valueFiles:
         - ../../values/platform/default.yaml
+        # Phase 2 TODO: Switch to environment-specific values files:
+        # - ../../values/platform/nonprod.yaml (for dev + qa cluster)
+        # - ../../values/platform/prod.yaml (for prod cluster)
+        # Until multi-cluster Applications are introduced, this will require
+        # manual switching or separate Application per cluster
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd  # Platform components will be deployed to their own namespaces when enabled

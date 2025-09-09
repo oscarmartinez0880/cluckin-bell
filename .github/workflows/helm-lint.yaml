@@ -50,9 +50,11 @@ jobs:
           helm template wingman-api charts/app-wingman-api -f values/env/qa.yaml > /dev/null
           helm template wingman-api charts/app-wingman-api -f values/env/prod.yaml > /dev/null
           
-          # Test platform-addons with platform values
+          # Test platform-addons with platform values (Phase 2)
           echo "Testing platform-addons..."
           helm template platform-addons charts/platform-addons -f values/platform/default.yaml > /dev/null
+          helm template platform-addons charts/platform-addons -f values/platform/nonprod.yaml > /dev/null
+          helm template platform-addons charts/platform-addons -f values/platform/prod.yaml > /dev/null
           
           echo "All template rendering tests passed!"
 
