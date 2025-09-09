@@ -21,7 +21,7 @@ platformAddons:
         eks.amazonaws.com/role-arn: arn:aws:iam::264765154707:role/cluckn-bell-nonprod-aws-load-balancer-controller
 
   externalDNS:
-    enabled: false
+    enabled: true
     namespace: external-dns
     chart:
       repo: https://kubernetes-sigs.github.io/external-dns/
@@ -30,12 +30,33 @@ platformAddons:
     serviceAccount:
       create: true
       name: external-dns
-      annotations: {}
+      annotations:
+        eks.amazonaws.com/role-arn: arn:aws:iam::264765154707:role/cluckn-bell-nonprod-external-dns
     txtOwnerId: cluckn-bell-nonprod
     domainFilters:
       - dev.cluckn-bell.com
       - qa.cluckn-bell.com
-      - internal.nonprod.cluckn-bell.com
+      - internal.dev.cluckn-bell.com
+    extraArgs:
+      - --policy=upsert-only
+      - --log-format=text
+      - --txt-prefix=_extdns
+    resources:
+      requests:
+        cpu: 100m
+        memory: 200Mi
+      limits:
+        cpu: 200m
+        memory: 500Mi
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 65534
+      fsGroup: 65534
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - ALL
 
   certManager:
     enabled: false

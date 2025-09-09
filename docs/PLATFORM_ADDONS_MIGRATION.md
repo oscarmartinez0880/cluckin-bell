@@ -59,7 +59,7 @@ kubectl -n external-dns delete deployment external-dns || true
 (Only after removing Terraform resources.)
 
 ### Enable in Helm
-`values/platform/nonprod.yaml`:
+To activate ExternalDNS in the nonprod cluster, set `enabled: true` in `values/platform/nonprod.yaml`:
 ```yaml
 platformAddons:
   externalDNS:
@@ -84,6 +84,8 @@ platformAddons:
       # - --zone-id-filter=ZQAPUBLIC456
       # - --zone-id-filter=ZDEVPRIVATE789
 ```
+
+After updating the values file, sync the `cluckn-bell-platform-addons-nonprod` Argo CD Application to deploy ExternalDNS.
 
 ### Validation
 ```bash
