@@ -33,6 +33,10 @@ platformAddons:
       annotations: {}
     txtOwnerId: ""
     domainFilters: []
+    extraArgs: []
+    provider: aws
+    registry: txt
+    interval: 1m
   certManager:
     enabled: false
     namespace: cert-manager

@@ -3,7 +3,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: aws-load-balancer-controller
-  namespace: {{ .Release.Namespace }}
+  namespace: argocd
   labels:
     {{- include "platform-addons.labels" . | nindent 4 }}
     component: aws-load-balancer-controller
@@ -12,12 +12,12 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://aws.github.io/eks-charts
-    chart: aws-load-balancer-controller
-    targetRevision: 1.7.1
+    repoURL: {{ .Values.platformAddons.awsLoadBalancerController.chart.repo | quote }}
+    chart: {{ .Values.platformAddons.awsLoadBalancerController.chart.name | quote }}
+    targetRevision: {{ .Values.platformAddons.awsLoadBalancerController.chart.version | quote }}
     helm:
       values: |
-        clusterName: {{ .Values.global.clusterName | quote }}
+        clusterName: {{ (.Values.platformAddons.awsLoadBalancerController.clusterName | default .Values.global.clusterName) | quote }}
         region: {{ .Values.global.region | quote }}
         serviceAccount:
           create: {{ .Values.platformAddons.awsLoadBalancerController.serviceAccount.create | default false }}
