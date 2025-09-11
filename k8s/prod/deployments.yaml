@@ -6,7 +6,12 @@ metadata:
   labels:
     app: drumstick-web
 spec:
-  replicas: 2
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: drumstick-web
@@ -21,6 +26,25 @@ spec:
           image: 346746763840.dkr.ecr.us-east-1.amazonaws.com/cluckin-bell-app:latest
           ports:
             - containerPort: 80
+          env:
+            - name: WORDPRESS_SITE_URL
+              value: "https://cluckn-bell.com"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           volumeMounts:
             - name: runtime-config
               mountPath: /usr/share/nginx/html/env.js
@@ -38,7 +62,12 @@ metadata:
   labels:
     app: wingman-api
 spec:
-  replicas: 2
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: wingman-api
@@ -58,3 +87,21 @@ spec:
               value: "/api"
             - name: CMS_BASE_URL
               value: "http://cms-svc."
+            - name: WORDPRESS_SITE_URL
+              value: "https://cluckn-bell.com"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
