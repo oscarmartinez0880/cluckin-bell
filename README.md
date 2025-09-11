@@ -32,6 +32,7 @@ Ingress
 Deployments
 - GitHub Actions in this repo assume OIDC and minimal roles created by cluckin-bell-infra.
 - Per-environment deploys pick the right cluster and namespace.
+- **GitOps Promotions**: Use the "02 - GitOps Promote" workflow in the Actions tab for single-click deployments to QA and Production. QA deployments commit directly to develop, while Production creates a PR for approval. See `.github/workflows/WORKFLOWS-OVERVIEW.md` for detailed usage instructions.
 
 Structure
 k8s/

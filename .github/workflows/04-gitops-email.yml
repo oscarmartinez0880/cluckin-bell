@@ -1,0 +1,140 @@
+name: 04 - GitOps Email Notification
+
+on:
+  workflow_run:
+    workflows: ["02 - GitOps Promote"]
+    types:
+      - completed
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  notify:
+    name: Send deployment notification
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download workflow artifacts
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Extract deployment info
+        id: info
+        run: |
+          # Extract information from the workflow run
+          WORKFLOW_URL="${{ github.event.workflow_run.html_url }}"
+          COMMIT_SHA="${{ github.event.workflow_run.head_sha }}"
+          COMMIT_URL="${{ github.event.repository.html_url }}/commit/${COMMIT_SHA}"
+          ACTOR="${{ github.event.workflow_run.triggering_actor.login }}"
+          
+          # Try to extract environment and tag from workflow run name or commit message
+          RUN_NAME="${{ github.event.workflow_run.display_title }}"
+          
+          # Default values
+          ENVIRONMENT="unknown"
+          IMAGE_TAG="unknown"
+          ACTION_TYPE="deployment"
+          
+          # Parse the run name/title to extract environment and image tag
+          if echo "$RUN_NAME" | grep -q "Promote to"; then
+            ENVIRONMENT=$(echo "$RUN_NAME" | sed -n 's/.*Promote to \([a-z]*\).*/\1/p')
+          fi
+          
+          # Get the latest commit message to extract tag info
+          COMMIT_MSG=$(git log --format=%B -n 1 $COMMIT_SHA 2>/dev/null || echo "")
+          if echo "$COMMIT_MSG" | grep -q "cluckin-bell-app:"; then
+            IMAGE_TAG=$(echo "$COMMIT_MSG" | grep -o 'cluckin-bell-app:[^[:space:]]*' | cut -d: -f2)
+          fi
+          
+          # Determine if this was a direct commit or PR creation
+          if echo "$COMMIT_MSG" | grep -q "Promote qa:"; then
+            ACTION_TYPE="Direct deployment to QA"
+          elif echo "$COMMIT_MSG" | grep -q "Promote prod:" || echo "$RUN_NAME" | grep -q "prod"; then
+            ACTION_TYPE="PR created for PROD deployment"
+          fi
+          
+          echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "commit_url=$COMMIT_URL" >> $GITHUB_OUTPUT
+          echo "workflow_url=$WORKFLOW_URL" >> $GITHUB_OUTPUT
+          echo "actor=$ACTOR" >> $GITHUB_OUTPUT
+          echo "action_type=$ACTION_TYPE" >> $GITHUB_OUTPUT
+
+      - name: Send email notification
+        uses: dawidd6/action-send-mail@v3
+        if: env.SMTP_SERVER != '' && env.SMTP_USERNAME != '' && env.SMTP_PASSWORD != '' && env.TO_EMAIL != ''
+        env:
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          TO_EMAIL: ${{ secrets.TO_EMAIL }}
+        with:
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: ${{ secrets.SMTP_PORT || '587' }}
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "🚀 Cluckin' Bell Deployment: ${{ steps.info.outputs.environment }} - ${{ steps.info.outputs.image_tag }}"
+          to: ${{ secrets.TO_EMAIL }}
+          from: "GitOps Notifications <${{ secrets.SMTP_USERNAME }}>"
+          html_body: |
+            <h2>🚀 Cluckin' Bell Deployment Notification</h2>
+            
+            <table style="border-collapse: collapse; font-family: Arial, sans-serif;">
+              <tr>
+                <td style="padding: 8px; font-weight: bold; background-color: #f5f5f5;">Environment:</td>
+                <td style="padding: 8px;">${{ steps.info.outputs.environment }}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; font-weight: bold; background-color: #f5f5f5;">Image Tag:</td>
+                <td style="padding: 8px;"><code>${{ steps.info.outputs.image_tag }}</code></td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; font-weight: bold; background-color: #f5f5f5;">Action:</td>
+                <td style="padding: 8px;">${{ steps.info.outputs.action_type }}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; font-weight: bold; background-color: #f5f5f5;">Triggered by:</td>
+                <td style="padding: 8px;">${{ steps.info.outputs.actor }}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; font-weight: bold; background-color: #f5f5f5;">Workflow:</td>
+                <td style="padding: 8px;"><a href="${{ steps.info.outputs.workflow_url }}">View workflow run</a></td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; font-weight: bold; background-color: #f5f5f5;">Commit:</td>
+                <td style="padding: 8px;"><a href="${{ steps.info.outputs.commit_url }}">View commit</a></td>
+              </tr>
+            </table>
+            
+            <hr style="margin: 20px 0;">
+            
+            <p style="color: #666; font-size: 12px;">
+              This notification was automatically sent by the GitOps Email Notification workflow.<br>
+              Time: ${{ github.event.workflow_run.updated_at }}
+            </p>
+
+      - name: Log notification status
+        run: |
+          if [ -z "${{ secrets.SMTP_SERVER }}" ] || [ -z "${{ secrets.SMTP_USERNAME }}" ] || [ -z "${{ secrets.SMTP_PASSWORD }}" ] || [ -z "${{ secrets.TO_EMAIL }}" ]; then
+            echo "⚠️ Email notification skipped - missing required SMTP secrets"
+            echo "Required secrets: SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, TO_EMAIL"
+            echo ""
+            echo "Deployment info that would have been sent:"
+            echo "- Environment: ${{ steps.info.outputs.environment }}"
+            echo "- Image Tag: ${{ steps.info.outputs.image_tag }}"
+            echo "- Action: ${{ steps.info.outputs.action_type }}"
+            echo "- Actor: ${{ steps.info.outputs.actor }}"
+            echo "- Workflow: ${{ steps.info.outputs.workflow_url }}"
+            echo "- Commit: ${{ steps.info.outputs.commit_url }}"
+          else
+            echo "✅ Email notification sent successfully"
+          fi

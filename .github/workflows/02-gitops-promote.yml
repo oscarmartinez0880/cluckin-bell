@@ -1,0 +1,175 @@
+name: 02 - GitOps Promote
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options: ['qa', 'prod']
+      image_tag:
+        description: 'Image tag to deploy (leave empty to auto-resolve latest sha-*)'
+        required: false
+        type: string
+
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  promote:
+    name: Promote to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up environment variables
+        id: setup
+        run: |
+          ENV="${{ inputs.environment }}"
+          
+          if [ "$ENV" = "qa" ]; then
+            echo "ecr_account=264765154707" >> $GITHUB_OUTPUT
+            echo "target_branch=develop" >> $GITHUB_OUTPUT
+            echo "role_arn=arn:aws:iam::264765154707:role/GH_ECR_Read_cb_nonprod_use1" >> $GITHUB_OUTPUT
+            echo "k8s_path=k8s/qa" >> $GITHUB_OUTPUT
+          elif [ "$ENV" = "prod" ]; then
+            echo "ecr_account=346746763840" >> $GITHUB_OUTPUT
+            echo "target_branch=main" >> $GITHUB_OUTPUT
+            echo "role_arn=arn:aws:iam::346746763840:role/GH_ECR_Read_cb_prod_use1" >> $GITHUB_OUTPUT
+            echo "k8s_path=k8s/prod" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS credentials (OIDC)
+        id: aws_auth
+        uses: aws-actions/configure-aws-credentials@v4
+        continue-on-error: true
+        with:
+          role-to-assume: ${{ steps.setup.outputs.role_arn }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: gha-promote-${{ github.run_id }}
+
+      - name: Resolve image tag
+        id: resolve_tag
+        run: |
+          IMAGE_TAG="${{ inputs.image_tag }}"
+          
+          if [ -z "$IMAGE_TAG" ]; then
+            if [ "${{ steps.aws_auth.outcome }}" = "success" ]; then
+              echo "🔍 Auto-resolving latest sha-* tag from ECR..."
+              
+              # Get latest sha-* tag from ECR
+              LATEST_TAG=$(aws ecr describe-images \
+                --repository-name cluckin-bell-app \
+                --query 'sort_by(imageDetails,&imagePushedAt)[-1].imageTags[?starts_with(@, `sha-`)] | [0]' \
+                --output text 2>/dev/null || echo "")
+              
+              if [ -n "$LATEST_TAG" ] && [ "$LATEST_TAG" != "None" ]; then
+                IMAGE_TAG="$LATEST_TAG"
+                echo "✅ Auto-resolved tag: $IMAGE_TAG"
+              else
+                echo "❌ Could not auto-resolve tag from ECR"
+                exit 1
+              fi
+            else
+              echo "❌ No image tag provided and ECR access not available"
+              echo "Please provide an image_tag manually"
+              exit 1
+            fi
+          fi
+          
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "📦 Using image tag: $IMAGE_TAG"
+
+      - name: Update manifests
+        run: |
+          ECR_REPO="${{ steps.setup.outputs.ecr_account }}.dkr.ecr.us-east-1.amazonaws.com/cluckin-bell-app"
+          NEW_IMAGE="$ECR_REPO:${{ steps.resolve_tag.outputs.image_tag }}"
+          
+          echo "🔧 Updating ${{ steps.setup.outputs.k8s_path }} manifests..."
+          echo "📦 New image: $NEW_IMAGE"
+          
+          # Update deployments.yaml - find containers with cluckin-bell-app image and update them
+          yq eval '
+            (.spec.template.spec.containers[] | select(.image | contains("cluckin-bell-app")) | .image) = "'$NEW_IMAGE'" |
+            (.spec.template.spec.initContainers[]? | select(.image | contains("cluckin-bell-app")) | .image) = "'$NEW_IMAGE'"
+          ' -i ${{ steps.setup.outputs.k8s_path }}/deployments.yaml
+          
+          echo "✅ Manifests updated successfully"
+
+      - name: Commit and push changes (QA)
+        if: inputs.environment == 'qa'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git checkout ${{ steps.setup.outputs.target_branch }}
+          git add ${{ steps.setup.outputs.k8s_path }}/
+          
+          if git diff --staged --quiet; then
+            echo "ℹ️ No changes to commit"
+          else
+            git commit -m "🚀 Promote ${{ inputs.environment }}: cluckin-bell-app:${{ steps.resolve_tag.outputs.image_tag }}
+
+            Environment: ${{ inputs.environment }}
+            Image: ${{ steps.setup.outputs.ecr_account }}.dkr.ecr.us-east-1.amazonaws.com/cluckin-bell-app:${{ steps.resolve_tag.outputs.image_tag }}
+            Triggered by: @${{ github.actor }}
+            "
+            
+            git push origin ${{ steps.setup.outputs.target_branch }}
+            echo "✅ Changes committed and pushed to ${{ steps.setup.outputs.target_branch }}"
+          fi
+
+      - name: Create Pull Request (PROD)
+        if: inputs.environment == 'prod'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: |
+            🚀 Promote ${{ inputs.environment }}: cluckin-bell-app:${{ steps.resolve_tag.outputs.image_tag }}
+            
+            Environment: ${{ inputs.environment }}
+            Image: ${{ steps.setup.outputs.ecr_account }}.dkr.ecr.us-east-1.amazonaws.com/cluckin-bell-app:${{ steps.resolve_tag.outputs.image_tag }}
+            Triggered by: @${{ github.actor }}
+          title: "🚀 Promote PROD: cluckin-bell-app:${{ steps.resolve_tag.outputs.image_tag }}"
+          body: |
+            ## Production Promotion
+            
+            **Environment:** ${{ inputs.environment }}  
+            **Image:** `${{ steps.setup.outputs.ecr_account }}.dkr.ecr.us-east-1.amazonaws.com/cluckin-bell-app:${{ steps.resolve_tag.outputs.image_tag }}`  
+            **Triggered by:** @${{ github.actor }}
+            
+            ### Changes
+            - Updated production manifests to pin cluckin-bell-app to `${{ steps.resolve_tag.outputs.image_tag }}`
+            
+            ### Deployment
+            After merging this PR, Argo CD will automatically sync the production environment.
+            
+            ---
+            *This PR was automatically created by the GitOps Promote workflow.*
+          branch: promote-prod-${{ steps.resolve_tag.outputs.image_tag }}
+          base: ${{ steps.setup.outputs.target_branch }}
+          delete-branch: true
+
+      - name: Summary
+        run: |
+          echo "## 🚀 Promotion Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag:** ${{ steps.resolve_tag.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Target Branch:** ${{ steps.setup.outputs.target_branch }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ inputs.environment }}" = "qa" ]; then
+            echo "- **Action:** Direct commit to develop (Argo CD will auto-sync QA)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Action:** PR created against main (requires approval)" >> $GITHUB_STEP_SUMMARY
+          fi
