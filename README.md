@@ -17,8 +17,8 @@ This repo contains Kubernetes resources and GitHub Actions deploy workflows for 
 - `k8s/` - Raw Kubernetes manifests (current production deployments)
 - `apps/` - Individual Argo CD Applications per environment
 
-**Target Kubernetes Version**: 1.34.0 (minimum 1.30)
-> **Note**: If EKS has not yet GA'd 1.34 at cluster creation time, use latest available minor (e.g., 1.30–1.32) and upgrade when GA.
+**Target Kubernetes Version**: 1.33.0 (minimum 1.30)
+> **Note**: If EKS has not yet GA'd 1.33 at cluster creation time, use latest available minor (e.g., 1.30–1.32) and upgrade when GA.
 
 For platform component enablement, see [docs/PLATFORM_ADDONS_MIGRATION.md](docs/PLATFORM_ADDONS_MIGRATION.md).
 For detailed migration information, see [docs/GITOPS_RESTRUCTURE.md](docs/GITOPS_RESTRUCTURE.md).
@@ -46,9 +46,9 @@ This repository implements **Option 2: Branch-based promotion** for environment 
 For complete branching documentation, see [docs/GITOPS_BRANCHING.md](docs/GITOPS_BRANCHING.md) and [docs/GITOPS_RESTRUCTURE.md](docs/GITOPS_RESTRUCTURE.md).
 
 ## Environments and clusters
-- dev and qa share a single EKS 1.30 cluster in AWS account 264765154707
+- dev and qa share a single EKS 1.33 cluster in AWS account 264765154707
   - Namespaces: cluckn-bell-dev, cluckn-bell-qa
-- prod runs on its own EKS 1.30 cluster in AWS account 346746763840
+- prod runs on its own EKS 1.33 cluster in AWS account 346746763840
   - Namespace: cluckn-bell-prod
 
 ## Domains (hosted in prod; dev/qa delegated to the dev/qa account)

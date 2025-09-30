@@ -13,8 +13,8 @@ Phase 2 Migration Status:
 All platform components are currently disabled and managed by Terraform.
 Components can be enabled one-by-one via environment-specific values files.
 
-Target Kubernetes Version: 1.34.0 (minimum 1.30)
-Note: If EKS has not yet GA'd 1.34 at cluster creation time, use latest
+Target Kubernetes Version: 1.33.0 (minimum 1.30)
+Note: If EKS has not yet GA'd 1.33 at cluster creation time, use latest
 available minor (e.g., 1.30–1.32) and upgrade when GA.
 
 For enablement instructions, see docs/PLATFORM_ADDONS_MIGRATION.md
