@@ -19,7 +19,7 @@ This document outlines the phased migration from raw Kubernetes manifests and Te
 |-------|--------|-------------|--------------|
 | **Phase 0** | ✅ Complete | Infrastructure & Argo CD Bootstrap | EKS clusters, Argo CD installation, app-of-apps pattern |
 | **Phase 1** | ✅ Complete | Helm Charts + ApplicationSets (Non-breaking) | Helm charts, ApplicationSets, parallel structure |
-| **Phase 2** | 🟡 In Progress | Platform Component Migration Bootstrap | Scaffold + env-specific values, K8s 1.34.0 target, migration docs |
+| **Phase 2** | 🟡 In Progress | Platform Component Migration Bootstrap | Scaffold + env-specific values, K8s 1.33.0 target, migration docs |
 | **Phase 3** | ⏳ Planned | Platform Component Enablement | Enable ALB Controller, ExternalDNS, cert-manager individually |
 | **Phase 4** | ⏳ Planned | Legacy Manifest Removal | Remove k8s/ directories, test parity |
 | **Phase 5** | ⏳ Planned | IAM Role Consolidation | Streamline IRSA roles, update workflows |
@@ -73,7 +73,7 @@ apps/
 - **Components**: ALB Controller, ExternalDNS, cert-manager, kube-prometheus-stack, metrics-server
 - **Status**: Scaffold available, all disabled by default (managed by Terraform until individually enabled)
 - **Values Files**: Environment-specific (`nonprod.yaml`, `prod.yaml`) with IRSA placeholders
-- **Target Kubernetes Version**: 1.34.0 (minimum 1.30)
+- **Target Kubernetes Version**: 1.33.0 (minimum 1.30)
 - **IAM Dependencies**: Requires roles from cluckin-bell-infra Terraform before enablement
 
 ### ApplicationSet Configuration
@@ -174,7 +174,7 @@ Since Phase 1 is additive only:
 - [x] Expand platform-addons chart with configurable component sections
 - [x] Add IRSA ServiceAccount annotation placeholders
 - [x] Create PLATFORM_ADDONS_MIGRATION.md documentation
-- [x] Update documentation with Phase 2 initiation and K8s 1.34.0 target
+- [x] Update documentation with Phase 2 initiation and K8s 1.33.0 target
 - [ ] Create IAM roles in cluckin-bell-infra Terraform repository
 - [ ] Update application-platform-addons.yaml for environment-specific values
 

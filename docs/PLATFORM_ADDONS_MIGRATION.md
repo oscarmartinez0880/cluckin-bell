@@ -2,7 +2,7 @@
 
 This document tracks phased migration of infrastructure-managed (Terraform / raw manifests) platform components into GitOps (Helm + Argo CD) via the `platform-addons` chart and environment-specific values.
 
-Kubernetes Version Target: 1.30+ (upgrade path to newer minors as they GA)
+Kubernetes Version Target: 1.33.0 (minimum 1.30)
 
 ---
 
