@@ -112,6 +112,114 @@ k8s/
   prod/
 ```
 
+## Observability Access
+
+### Argo CD
+
+#### Nonprod
+```bash
+# Get LoadBalancer URL (if exposed as LoadBalancer)
+kubectl get svc argocd-server -n argocd -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+
+# Get admin password
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+
+# Alternative: Port-forward
+kubectl port-forward svc/argocd-server -n argocd 8080:443
+# Access at https://localhost:8080
+```
+
+#### Prod
+```bash
+# Get LoadBalancer URL (if exposed as LoadBalancer)
+kubectl get svc argocd-server -n argocd -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+
+# Get admin password
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+
+# Alternative: Port-forward
+kubectl port-forward svc/argocd-server -n argocd 8080:443
+# Access at https://localhost:8080
+```
+
+**Default credentials:**
+- Username: `admin`
+- Password: Use command above to retrieve
+
+### Grafana
+
+#### Nonprod
+```bash
+# Get LoadBalancer URL (if exposed as LoadBalancer)
+kubectl get svc -n monitoring kube-prometheus-stack-grafana -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+
+# Get admin password
+kubectl get secret -n monitoring kube-prometheus-stack-grafana -o jsonpath="{.data.admin-password}" | base64 -d
+
+# Alternative: Port-forward
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
+# Access at http://localhost:3000
+```
+
+#### Prod
+```bash
+# Get LoadBalancer URL (if exposed as LoadBalancer)
+kubectl get svc -n monitoring kube-prometheus-stack-grafana -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+
+# Get admin password
+kubectl get secret -n monitoring kube-prometheus-stack-grafana -o jsonpath="{.data.admin-password}" | base64 -d
+
+# Alternative: Port-forward
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
+# Access at http://localhost:3000
+```
+
+**Default credentials:**
+- Username: `admin`
+- Password: Use command above to retrieve from secret
+
+### Prometheus
+
+#### Nonprod
+```bash
+# Port-forward to Prometheus
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 9090:9090
+# Access at http://localhost:9090
+
+# Check targets
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 9090:9090
+# Then visit http://localhost:9090/targets
+```
+
+#### Prod
+```bash
+# Port-forward to Prometheus
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 9090:9090
+# Access at http://localhost:9090
+
+# Check targets
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 9090:9090
+# Then visit http://localhost:9090/targets
+```
+
+### Alertmanager
+
+#### Nonprod
+```bash
+# Port-forward to Alertmanager
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-alertmanager 9093:9093
+# Access at http://localhost:9093
+```
+
+#### Prod
+```bash
+# Port-forward to Alertmanager
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-alertmanager 9093:9093
+# Access at http://localhost:9093
+```
+
+**Note:** Services are initially exposed as LoadBalancer (per PR #39). Once ALB Controller and cert-manager are fully enabled, these will be migrated to use Ingress resources with TLS termination.
+
 ## Notes
 - IRSA is only required if pods need AWS APIs; image pulls are handled by node IAM roles.
 - TLS: add ACM certificates and ALB annotations when ready (see ingress.yaml TODOs).
