@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: wingman-api-metrics
+  namespace: cluckn-bell-qa
+  labels:
+    app: wingman-api
+    monitoring: prometheus
+spec:
+  selector:
+    app: wingman-api
+  ports:
+    - name: http-metrics
+      port: 8080
+      targetPort: 8080
+      protocol: TCP

@@ -53,12 +53,18 @@ platformAddons:
       repo: https://kubernetes-sigs.github.io/metrics-server/
       name: metrics-server
       version: 3.12.2
-  monitoring:
+  kubePrometheusStack:
     enabled: false
+    namespace: monitoring
     chart:
       repo: https://prometheus-community.github.io/helm-charts
       name: kube-prometheus-stack
       version: 62.6.0
+    prometheus: {}
+    alertmanager: {}
+    grafana: {}
+    kubeStateMetrics: {}
+    nodeExporter: {}
 
 # Legacy compatibility toggles (will be removed later)
 aws-load-balancer-controller:

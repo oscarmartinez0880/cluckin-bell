@@ -1,0 +1,59 @@
+{{- if .Values.platformAddons.kubePrometheusStack.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  namespace: argocd
+  labels:
+    {{- include "platform-addons.labels" . | nindent 4 }}
+    component: kube-prometheus-stack
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: {{ .Values.platformAddons.kubePrometheusStack.chart.repo | quote }}
+    chart: {{ .Values.platformAddons.kubePrometheusStack.chart.name | quote }}
+    targetRevision: {{ .Values.platformAddons.kubePrometheusStack.chart.version | quote }}
+    helm:
+      values: |
+        {{- if .Values.platformAddons.kubePrometheusStack.prometheus }}
+        prometheus:
+          {{- toYaml .Values.platformAddons.kubePrometheusStack.prometheus | nindent 10 }}
+        {{- end }}
+        {{- if .Values.platformAddons.kubePrometheusStack.alertmanager }}
+        alertmanager:
+          {{- toYaml .Values.platformAddons.kubePrometheusStack.alertmanager | nindent 10 }}
+        {{- end }}
+        {{- if .Values.platformAddons.kubePrometheusStack.grafana }}
+        grafana:
+          {{- toYaml .Values.platformAddons.kubePrometheusStack.grafana | nindent 10 }}
+        {{- end }}
+        {{- if .Values.platformAddons.kubePrometheusStack.kubeStateMetrics }}
+        kube-state-metrics:
+          {{- toYaml .Values.platformAddons.kubePrometheusStack.kubeStateMetrics | nindent 10 }}
+        {{- end }}
+        {{- if .Values.platformAddons.kubePrometheusStack.nodeExporter }}
+        prometheus-node-exporter:
+          {{- toYaml .Values.platformAddons.kubePrometheusStack.nodeExporter | nindent 10 }}
+        {{- end }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: {{ .Values.platformAddons.kubePrometheusStack.namespace | default "monitoring" }}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+{{- end }}
