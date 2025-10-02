@@ -19,6 +19,9 @@ spec:
             level: info
 
         server:
+          service:
+            type: LoadBalancer
+
           ingress:
             enabled: false
 
