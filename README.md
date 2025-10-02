@@ -112,6 +112,118 @@ k8s/
   prod/
 ```
 
+## Observability access
+
+### Argo CD
+
+#### Nonprod (cluckn-bell-nonprod cluster)
+
+**Get LoadBalancer URL (when exposed as LoadBalancer):**
+```bash
+kubectl get svc argocd-server -n argocd -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+# Access at https://<elb-hostname>
+```
+
+**Get admin password:**
+```bash
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+echo  # newline
+```
+
+**Port-forward alternative:**
+```bash
+kubectl port-forward svc/argocd-server -n argocd 8080:443
+# Access at https://localhost:8080
+# Username: admin
+```
+
+#### Prod (cluckn-bell-prod cluster)
+
+Same commands as nonprod, just connect to the prod cluster first:
+```bash
+aws eks update-kubeconfig --region us-east-1 --name cluckn-bell-prod --profile prod
+```
+
+### Grafana
+
+Grafana is deployed via kube-prometheus-stack in the `monitoring` namespace.
+
+#### Nonprod (cluckn-bell-nonprod cluster)
+
+**Get LoadBalancer URL (when exposed as LoadBalancer):**
+```bash
+kubectl get svc -n monitoring kube-prometheus-stack-grafana -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+# Access at http://<elb-hostname>
+```
+
+**Get admin password:**
+```bash
+kubectl get secret -n monitoring kube-prometheus-stack-grafana -o jsonpath="{.data.admin-password}" | base64 -d
+echo  # newline
+# Default username: admin
+```
+
+**Port-forward alternative:**
+```bash
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
+# Access at http://localhost:3000
+# Username: admin
+```
+
+#### Prod (cluckn-bell-prod cluster)
+
+Same commands as nonprod, just connect to the prod cluster first.
+
+### Prometheus
+
+Prometheus is deployed via kube-prometheus-stack in the `monitoring` namespace.
+
+#### Access Prometheus UI (port-forward)
+
+**Nonprod:**
+```bash
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 9090:9090
+# Access at http://localhost:9090
+```
+
+**Prod:**
+```bash
+# Connect to prod cluster first, then:
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 9090:9090
+# Access at http://localhost:9090
+```
+
+#### Check targets
+
+```bash
+# View Prometheus targets status
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 9090:9090 &
+curl http://localhost:9090/api/v1/targets | jq '.data.activeTargets[] | {job: .labels.job, health: .health}'
+```
+
+### Alertmanager
+
+Alertmanager is deployed via kube-prometheus-stack in the `monitoring` namespace.
+
+#### Access Alertmanager UI (port-forward)
+
+**Nonprod:**
+```bash
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-alertmanager 9093:9093
+# Access at http://localhost:9093
+```
+
+**Prod:**
+```bash
+# Connect to prod cluster first, then:
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-alertmanager 9093:9093
+# Access at http://localhost:9093
+```
+
+### Note on Service Exposure
+
+Per PR #39, Argo CD, Grafana, Prometheus, and Alertmanager services are initially exposed as LoadBalancer type for easy access. Once ALB Controller and cert-manager are fully enabled and configured, these will be migrated to use Ingress resources with TLS certificates for proper domain-based access and SSL termination.
+
 ## Notes
 - IRSA is only required if pods need AWS APIs; image pulls are handled by node IAM roles.
 - TLS: add ACM certificates and ALB annotations when ready (see ingress.yaml TODOs).
