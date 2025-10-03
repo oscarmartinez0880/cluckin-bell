@@ -76,6 +76,22 @@ apps/
 - **Target Kubernetes Version**: 1.33.0 (minimum 1.30)
 - **IAM Dependencies**: Requires roles from cluckin-bell-infra Terraform before enablement
 
+#### Observability Stack (Enabled)
+- **metrics-server**: Enabled in nonprod and prod for pod/node metrics
+- **kube-prometheus-stack**: Enabled in nonprod and prod, includes:
+  - Prometheus for metrics collection
+  - Alertmanager for alert routing
+  - Grafana for visualization (LoadBalancer service type)
+  - kube-state-metrics for cluster resource metrics
+  - node-exporter for node-level metrics
+- **Grafana Access**: 
+  - Service type: LoadBalancer (initial setup, will migrate to Ingress with ALB Controller)
+  - Default credentials: admin/admin (should be changed via secret in production)
+  - Find Grafana URL: `kubectl get svc -n monitoring kube-prometheus-stack-grafana`
+- **ServiceMonitors**: Configured for wingman-api in dev, qa, and prod namespaces
+  - Scrape endpoint: `/metrics` on port 8080
+  - Interval: 30s
+
 ### ApplicationSet Configuration
 
 **Matrix Generator Strategy:**
@@ -111,6 +127,27 @@ apps/
 - **Namespace**: cluckn-bell-prod
 - **Image Tags**: `prod`
 - **Domains**: `cluckn-bell.com`, `api.cluckn-bell.com`
+
+### Argo CD UI Access
+
+**Service Type**: LoadBalancer (enabled in both nonprod and prod)
+- Provides direct access to Argo CD UI without port-forwarding
+- Will be migrated to Ingress with TLS once ALB Controller and cert-manager are fully enabled
+
+**Access Instructions**:
+1. Get the LoadBalancer URL:
+   ```bash
+   kubectl get svc argocd-server -n argocd
+   ```
+2. Access via the EXTERNAL-IP (may take a few minutes to provision)
+3. Default credentials:
+   - Username: `admin`
+   - Password: Retrieved via:
+     ```bash
+     kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+     ```
+
+**Note**: The Argo CD server is configured with `insecure: true` for initial setup. TLS will be enabled when switching to Ingress.
 
 ## Testing Strategy
 

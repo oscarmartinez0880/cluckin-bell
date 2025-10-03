@@ -48,15 +48,47 @@ platformAddons:
       annotations: {}
 
   metricsServer:
-    enabled: false
+    enabled: true
     chart:
       repo: https://kubernetes-sigs.github.io/metrics-server/
       name: metrics-server
       version: 3.12.2
 
-  monitoring:
-    enabled: false
+  kubePrometheusStack:
+    enabled: true
+    namespace: monitoring
     chart:
       repo: https://prometheus-community.github.io/helm-charts
       name: kube-prometheus-stack
       version: 62.6.0
+    prometheus:
+      prometheusSpec:
+        retention: 30d
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 1000m
+            memory: 4Gi
+    alertmanager:
+      alertmanagerSpec:
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+    grafana:
+      enabled: true
+      adminPassword: admin
+      service:
+        type: LoadBalancer
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 200m
+          memory: 512Mi

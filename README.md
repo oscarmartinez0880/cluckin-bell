@@ -83,19 +83,19 @@ For complete branching documentation, see [docs/GITOPS_BRANCHING.md](docs/GITOPS
 charts/
   app-frontend/           # Helm chart for drumstick-web
   app-wingman-api/        # Helm chart for wingman-api
-  platform-addons/       # Platform components (Phase 2 scaffold)
+  platform-addons/        # Platform components (Phase 2 scaffold)
 values/
   env/
-    dev.yaml             # Dev environment values
-    qa.yaml              # QA environment values
-    prod.yaml            # Prod environment values
+    dev.yaml              # Dev environment values
+    qa.yaml               # QA environment values
+    prod.yaml             # Prod environment values
   platform/
-    nonprod.yaml         # Platform add-ons values (dev + qa)
-    prod.yaml            # Platform add-ons values (prod)
-    default.yaml         # Platform add-ons values (legacy)
+    nonprod.yaml          # Platform add-ons values (dev + qa)
+    prod.yaml             # Platform add-ons values (prod)
+    default.yaml          # Platform add-ons values (legacy)
 apps/
   applicationset-apps.yaml          # Matrix ApplicationSet
-  application-platform-addons.yaml # Platform Application
+  application-platform-addons.yaml  # Platform Application
 ```
 
 ### Legacy Structure (Current Production)
@@ -112,7 +112,7 @@ k8s/
   prod/
 ```
 
-## Observability access
+## Observability Access
 
 ### Argo CD
 
