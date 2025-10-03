@@ -7,6 +7,8 @@ metadata:
   labels:
     {{- include "platform-addons.labels" . | nindent 4 }}
     component: aws-load-balancer-controller
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:

@@ -39,7 +39,7 @@ Set `enabled: false` and sync Argo CD (optionally re-enable Terraform module).
 
 ---
 
-## Step 2 – Migrate ExternalDNS (Nonprod) (IN PROGRESS)
+## Step 2 – Migrate ExternalDNS (Nonprod & Prod) (COMPLETED)
 
 ### Goal
 Migrate ExternalDNS to Helm for nonprod (dev + qa shared cluster), managing both public and private hosted zones.
@@ -114,9 +114,56 @@ Set `externalDNS.enabled: false` and sync Argo CD (records remain unless you man
 
 ---
 
-## Step 3 – cert-manager (Planned)
+## Step 3 – cert-manager (COMPLETED)
 
-### Preview
+### Goal
+Deploy cert-manager with ClusterIssuers for automatic TLS certificate provisioning via Let's Encrypt.
+
+### Implementation
+- **Nonprod**: Enabled in `values/platform/nonprod.yaml`
+- **Prod**: Enabled in `values/platform/prod.yaml`
+- **CRDs**: Installed automatically via `installCRDs: true`
+- **ACME Solver**: HTTP-01 via ALB Ingress Controller (default)
+- **DNS-01 Solver**: Commented placeholders for Route53-based wildcard certificates
+
+### ClusterIssuers Created
+Each environment has two ClusterIssuers:
+1. `cluster-issuer-staging` - Let's Encrypt staging (for testing)
+2. `cluster-issuer-prod` - Let's Encrypt production (for real certificates)
+
+### Sync Wave
+- **Wave 1**: cert-manager Application deployment
+- **Wave 2**: ClusterIssuers (depends on cert-manager CRDs)
+- **Wave 3**: Ingress resources with TLS (depends on ClusterIssuers)
+
+### DNS-01 Configuration (Optional)
+To enable wildcard certificates via Route53 DNS-01:
+1. Uncomment DNS-01 solver sections in ClusterIssuer configuration
+2. Replace placeholder zone IDs with actual Route53 hosted zone IDs
+3. Add IRSA role annotation to cert-manager serviceAccount:
+   ```yaml
+   serviceAccount:
+     annotations:
+       eks.amazonaws.com/role-arn: arn:aws:iam::<account>:role/cluckn-bell-<env>-cert-manager
+   ```
+4. Create IAM role in Terraform with Route53 permissions
+
+### Validation
+```bash
+# Check cert-manager pods
+kubectl -n cert-manager get pods
+
+# Verify ClusterIssuers
+kubectl get clusterissuer
+
+# Check certificate requests
+kubectl get certificate,certificaterequest -A
+
+# View cert-manager logs
+kubectl -n cert-manager logs -l app=cert-manager
+```
+
+### Previous Preview
 - IRSA only if DNS-01 with Route53 is required.
 - Install CRDs via chart (`installCRDs: true` already scaffolded).
 - Add ClusterIssuer(s) for staging + production (Let’s Encrypt) after enabling.
