@@ -1,0 +1,139 @@
+{{- if .Values.platformAddons.ingress }}
+{{- if .Values.platformAddons.ingress.argocd }}
+{{- if .Values.platformAddons.ingress.argocd.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argocd-server
+  namespace: argocd
+  labels:
+    {{- include "platform-addons.labels" . | nindent 4 }}
+    component: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    {{- if .Values.platformAddons.ingress.argocd.annotations }}
+    {{- toYaml .Values.platformAddons.ingress.argocd.annotations | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if .Values.platformAddons.ingress.argocd.ingressClassName }}
+  ingressClassName: {{ .Values.platformAddons.ingress.argocd.ingressClassName }}
+  {{- end }}
+  {{- if .Values.platformAddons.ingress.argocd.tls }}
+  tls:
+  {{- range .Values.platformAddons.ingress.argocd.tls }}
+    - hosts:
+      {{- range .hosts }}
+        - {{ . | quote }}
+      {{- end }}
+      secretName: {{ .secretName }}
+  {{- end }}
+  {{- end }}
+  rules:
+  {{- range .Values.platformAddons.ingress.argocd.hosts }}
+    - host: {{ . | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: argocd-server
+                port:
+                  number: 80
+  {{- end }}
+{{- end }}
+{{- end }}
+
+{{- if .Values.platformAddons.ingress.grafana }}
+{{- if .Values.platformAddons.ingress.grafana.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana
+  namespace: {{ .Values.platformAddons.kubePrometheusStack.namespace | default "monitoring" }}
+  labels:
+    {{- include "platform-addons.labels" . | nindent 4 }}
+    component: grafana
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    {{- if .Values.platformAddons.ingress.grafana.annotations }}
+    {{- toYaml .Values.platformAddons.ingress.grafana.annotations | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if .Values.platformAddons.ingress.grafana.ingressClassName }}
+  ingressClassName: {{ .Values.platformAddons.ingress.grafana.ingressClassName }}
+  {{- end }}
+  {{- if .Values.platformAddons.ingress.grafana.tls }}
+  tls:
+  {{- range .Values.platformAddons.ingress.grafana.tls }}
+    - hosts:
+      {{- range .hosts }}
+        - {{ . | quote }}
+      {{- end }}
+      secretName: {{ .secretName }}
+  {{- end }}
+  {{- end }}
+  rules:
+  {{- range .Values.platformAddons.ingress.grafana.hosts }}
+    - host: {{ . | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kube-prometheus-stack-grafana
+                port:
+                  number: 80
+  {{- end }}
+{{- end }}
+{{- end }}
+
+{{- if .Values.platformAddons.ingress.prometheus }}
+{{- if .Values.platformAddons.ingress.prometheus.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: prometheus
+  namespace: {{ .Values.platformAddons.kubePrometheusStack.namespace | default "monitoring" }}
+  labels:
+    {{- include "platform-addons.labels" . | nindent 4 }}
+    component: prometheus
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+    {{- if .Values.platformAddons.ingress.prometheus.annotations }}
+    {{- toYaml .Values.platformAddons.ingress.prometheus.annotations | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if .Values.platformAddons.ingress.prometheus.ingressClassName }}
+  ingressClassName: {{ .Values.platformAddons.ingress.prometheus.ingressClassName }}
+  {{- end }}
+  {{- if .Values.platformAddons.ingress.prometheus.tls }}
+  tls:
+  {{- range .Values.platformAddons.ingress.prometheus.tls }}
+    - hosts:
+      {{- range .hosts }}
+        - {{ . | quote }}
+      {{- end }}
+      secretName: {{ .secretName }}
+  {{- end }}
+  {{- end }}
+  rules:
+  {{- range .Values.platformAddons.ingress.prometheus.hosts }}
+    - host: {{ . | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kube-prometheus-stack-prometheus
+                port:
+                  number: 9090
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
