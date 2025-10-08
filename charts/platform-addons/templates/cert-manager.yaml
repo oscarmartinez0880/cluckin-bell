@@ -1,0 +1,71 @@
+{{- if .Values.platformAddons.certManager.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+  labels:
+    {{- include "platform-addons.labels" . | nindent 4 }}
+    component: cert-manager
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: {{ .Values.platformAddons.certManager.chart.repo | quote }}
+    chart: {{ .Values.platformAddons.certManager.chart.name | quote }}
+    targetRevision: {{ .Values.platformAddons.certManager.chart.version | quote }}
+    helm:
+      values: |
+        installCRDs: {{ .Values.platformAddons.certManager.installCRDs | default true }}
+        serviceAccount:
+          create: true
+          name: {{ .Values.platformAddons.certManager.serviceAccount.name | default "cert-manager" | quote }}
+          {{- if .Values.platformAddons.certManager.serviceAccount.annotations }}
+          annotations:
+            {{- toYaml .Values.platformAddons.certManager.serviceAccount.annotations | nindent 12 }}
+          {{- end }}
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        webhook:
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+        cainjector:
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: {{ .Values.platformAddons.certManager.namespace | default "cert-manager" }}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+{{- end }}

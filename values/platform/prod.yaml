@@ -7,7 +7,7 @@ global:
 
 platformAddons:
   awsLoadBalancerController:
-    enabled: false
+    enabled: true
     namespace: kube-system
     chart:
       repo: https://aws.github.io/eks-charts
@@ -21,7 +21,7 @@ platformAddons:
         eks.amazonaws.com/role-arn: arn:aws:iam::346746763840:role/cluckn-bell-prod-aws-load-balancer-controller
 
   externalDNS:
-    enabled: false
+    enabled: true
     namespace: external-dns
     chart:
       repo: https://kubernetes-sigs.github.io/external-dns/
@@ -30,14 +30,35 @@ platformAddons:
     serviceAccount:
       create: true
       name: external-dns
-      annotations: {}
+      annotations:
+        eks.amazonaws.com/role-arn: arn:aws:iam::346746763840:role/cluckn-bell-prod-external-dns
     txtOwnerId: cluckn-bell-prod
     domainFilters:
       - cluckn-bell.com
       - internal.prod.cluckn-bell.com
+    extraArgs:
+      - --policy=upsert-only
+      - --log-format=text
+      - --txt-prefix=_extdns
+    resources:
+      requests:
+        cpu: 100m
+        memory: 200Mi
+      limits:
+        cpu: 200m
+        memory: 500Mi
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 65534
+      fsGroup: 65534
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - ALL
 
   certManager:
-    enabled: false
+    enabled: true
     namespace: cert-manager
     chart:
       repo: https://charts.jetstack.io
@@ -45,7 +66,58 @@ platformAddons:
       version: v1.15.3
     installCRDs: true
     serviceAccount:
+      name: cert-manager
       annotations: {}
+      # Optional: Add IRSA role for DNS-01 validation with Route53
+      # annotations:
+      #   eks.amazonaws.com/role-arn: arn:aws:iam::346746763840:role/cluckn-bell-prod-cert-manager
+    clusterIssuers:
+      cluster-issuer-staging:
+        server: https://acme-staging-v02.api.letsencrypt.org/directory
+        email: admin@cluckn-bell.com
+        solvers:
+          # HTTP-01 solver using ALB Ingress
+          - http01:
+              ingress:
+                class: alb
+          # DNS-01 solver for wildcard certificates (optional, requires IRSA role)
+          # - dns01:
+          #     route53:
+          #       region: us-east-1
+          #       hostedZoneID: ZPRODPUBLIC123  # TODO: Replace with actual prod zone ID
+          #   selector:
+          #     dnsZones:
+          #       - cluckn-bell.com
+          # - dns01:
+          #     route53:
+          #       region: us-east-1
+          #       hostedZoneID: ZPRODPRIVATE456  # TODO: Replace with actual prod private zone ID
+          #   selector:
+          #     dnsZones:
+          #       - internal.prod.cluckn-bell.com
+      cluster-issuer-prod:
+        server: https://acme-v02.api.letsencrypt.org/directory
+        email: admin@cluckn-bell.com
+        solvers:
+          # HTTP-01 solver using ALB Ingress
+          - http01:
+              ingress:
+                class: alb
+          # DNS-01 solver for wildcard certificates (optional, requires IRSA role)
+          # - dns01:
+          #     route53:
+          #       region: us-east-1
+          #       hostedZoneID: ZPRODPUBLIC123  # TODO: Replace with actual prod zone ID
+          #   selector:
+          #     dnsZones:
+          #       - cluckn-bell.com
+          # - dns01:
+          #     route53:
+          #       region: us-east-1
+          #       hostedZoneID: ZPRODPRIVATE456  # TODO: Replace with actual prod private zone ID
+          #   selector:
+          #     dnsZones:
+          #       - internal.prod.cluckn-bell.com
 
   metricsServer:
     enabled: true
@@ -92,3 +164,60 @@ platformAddons:
         limits:
           cpu: 200m
           memory: 512Mi
+
+  # Platform Ingress Resources (deployed after ALB Controller)
+  ingress:
+    argocd:
+      enabled: true
+      hosts:
+        - argocd.cluckn-bell.com
+      annotations:
+        alb.ingress.kubernetes.io/scheme: internet-facing
+        alb.ingress.kubernetes.io/target-type: ip
+        alb.ingress.kubernetes.io/group.name: cluckn-bell-prod
+        alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+        alb.ingress.kubernetes.io/ssl-redirect: "443"
+        alb.ingress.kubernetes.io/backend-protocol: HTTP
+        alb.ingress.kubernetes.io/healthcheck-path: /healthz
+        # Enable TLS with cert-manager
+        cert-manager.io/cluster-issuer: cluster-issuer-prod
+      tls:
+        - secretName: argocd-tls
+          hosts:
+            - argocd.cluckn-bell.com
+    grafana:
+      enabled: true
+      hosts:
+        - grafana.cluckn-bell.com
+      annotations:
+        alb.ingress.kubernetes.io/scheme: internet-facing
+        alb.ingress.kubernetes.io/target-type: ip
+        alb.ingress.kubernetes.io/group.name: cluckn-bell-prod
+        alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+        alb.ingress.kubernetes.io/ssl-redirect: "443"
+        alb.ingress.kubernetes.io/backend-protocol: HTTP
+        alb.ingress.kubernetes.io/healthcheck-path: /api/health
+        # Enable TLS with cert-manager
+        cert-manager.io/cluster-issuer: cluster-issuer-prod
+      tls:
+        - secretName: grafana-tls
+          hosts:
+            - grafana.cluckn-bell.com
+    prometheus:
+      enabled: true
+      hosts:
+        - prometheus.cluckn-bell.com
+      annotations:
+        alb.ingress.kubernetes.io/scheme: internet-facing
+        alb.ingress.kubernetes.io/target-type: ip
+        alb.ingress.kubernetes.io/group.name: cluckn-bell-prod
+        alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+        alb.ingress.kubernetes.io/ssl-redirect: "443"
+        alb.ingress.kubernetes.io/backend-protocol: HTTP
+        alb.ingress.kubernetes.io/healthcheck-path: /-/healthy
+        # Enable TLS with cert-manager
+        cert-manager.io/cluster-issuer: cluster-issuer-prod
+      tls:
+        - secretName: prometheus-tls
+          hosts:
+            - prometheus.cluckn-bell.com

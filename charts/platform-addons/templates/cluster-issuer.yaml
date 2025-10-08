@@ -1,0 +1,29 @@
+{{- if and .Values.platformAddons.certManager.enabled .Values.platformAddons.certManager.clusterIssuers }}
+{{- range $name, $issuer := .Values.platformAddons.certManager.clusterIssuers }}
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "platform-addons.labels" $ | nindent 4 }}
+    component: cert-manager
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  acme:
+    server: {{ $issuer.server | quote }}
+    email: {{ $issuer.email | quote }}
+    privateKeySecretRef:
+      name: {{ printf "%s-account-key" $name }}
+    solvers:
+    {{- if $issuer.solvers }}
+    {{- toYaml $issuer.solvers | nindent 4 }}
+    {{- else }}
+    # Default HTTP-01 solver for ALB
+    - http01:
+        ingress:
+          class: alb
+    {{- end }}
+{{- end }}
+{{- end }}
