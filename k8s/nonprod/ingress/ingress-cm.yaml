@@ -28,7 +28,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: wordpress-svc
+                name: cms-svc
                 port:
                   number: 80
     - host: qacm.cluckn-bell.com
@@ -38,7 +38,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: wordpress-svc
+                name: cms-svc
                 port:
                   number: 80
     - host: devcm.cluckn-bell.com
@@ -48,6 +48,6 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: wordpress-svc
+                name: cms-svc
                 port:
                   number: 80

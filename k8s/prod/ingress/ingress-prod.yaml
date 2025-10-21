@@ -25,13 +25,13 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: cluckin-bell-service
+                name: wingman-api-svc
                 port:
                   number: 8080
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: cluckin-bell-service
+                name: drumstick-web
                 port:
                   number: 80
