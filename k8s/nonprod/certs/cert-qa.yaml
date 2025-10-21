@@ -1,0 +1,14 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: qa-cluckn-bell-cert
+  namespace: qa
+spec:
+  secretName: qa-cluckn-bell-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+    group: cert-manager.io
+  dnsNames:
+    - qa.cluckn-bell.com

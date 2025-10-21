@@ -1,0 +1,108 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: slo-alerts
+  namespace: monitoring
+  labels:
+    prometheus: kube-prometheus
+spec:
+  groups:
+    - name: availability-slo
+      interval: 30s
+      rules:
+        # Error budget burn rate alerts (multi-window)
+        # Target: 99.9% availability (prod)
+        # Error budget: 0.1% = 43.2m/month
+        - alert: HighErrorBudgetBurnRate
+          expr: |
+            (
+              sum(rate(probe_success{job="blackbox-exporter"}[1h])) by (instance) < 0.999
+              and
+              sum(rate(probe_success{job="blackbox-exporter"}[5m])) by (instance) < 0.999
+            )
+          for: 2m
+          labels:
+            severity: critical
+            env: prod
+          annotations:
+            summary: "High error budget burn rate for {{ $labels.instance }}"
+            description: "Site {{ $labels.instance }} is burning error budget at a high rate (availability < 99.9% over 5m and 1h windows)"
+        
+        - alert: ModerateErrorBudgetBurnRate
+          expr: |
+            (
+              sum(rate(probe_success{job="blackbox-exporter"}[6h])) by (instance) < 0.999
+              and
+              sum(rate(probe_success{job="blackbox-exporter"}[30m])) by (instance) < 0.999
+            )
+          for: 15m
+          labels:
+            severity: warning
+            env: prod
+          annotations:
+            summary: "Moderate error budget burn rate for {{ $labels.instance }}"
+            description: "Site {{ $labels.instance }} is burning error budget at a moderate rate (availability < 99.9% over 30m and 6h windows)"
+        
+        - alert: SiteDown
+          expr: probe_success{job="blackbox-exporter"} == 0
+          for: 1m
+          labels:
+            severity: critical
+            env: prod
+          annotations:
+            summary: "Site {{ $labels.instance }} is down"
+            description: "Site {{ $labels.instance }} has been down for more than 1 minute"
+
+    - name: latency-slo
+      interval: 30s
+      rules:
+        # p95 latency SLO
+        # Target: 500ms (prod)
+        - alert: HighLatency
+          expr: |
+            histogram_quantile(0.95, 
+              sum(rate(probe_http_duration_seconds_bucket{job="blackbox-exporter"}[5m])) by (le, instance)
+            ) > 0.5
+          for: 5m
+          labels:
+            severity: warning
+            env: prod
+          annotations:
+            summary: "High latency for {{ $labels.instance }}"
+            description: "p95 latency for {{ $labels.instance }} is {{ $value | humanizeDuration }} (threshold: 500ms)"
+        
+        - alert: CriticalLatency
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(probe_http_duration_seconds_bucket{job="blackbox-exporter"}[5m])) by (le, instance)
+            ) > 1.0
+          for: 2m
+          labels:
+            severity: critical
+            env: prod
+          annotations:
+            summary: "Critical latency for {{ $labels.instance }}"
+            description: "p95 latency for {{ $labels.instance }} is {{ $value | humanizeDuration }} (threshold: 1s)"
+
+    - name: sre-metrics
+      interval: 30s
+      rules:
+        # SRE Golden Signals and metrics
+        - record: site:availability:5m
+          expr: |
+            avg(rate(probe_success{job="blackbox-exporter"}[5m])) by (instance)
+        
+        - record: site:availability:1h
+          expr: |
+            avg(rate(probe_success{job="blackbox-exporter"}[1h])) by (instance)
+        
+        - record: site:latency_p95:5m
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(probe_http_duration_seconds_bucket{job="blackbox-exporter"}[5m])) by (le, instance)
+            )
+        
+        - record: site:error_budget_remaining:30d
+          expr: |
+            (1 - 0.999) - (1 - avg_over_time(site:availability:1h[30d]))

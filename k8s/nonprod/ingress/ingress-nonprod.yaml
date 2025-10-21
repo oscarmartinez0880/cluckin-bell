@@ -1,0 +1,74 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cluckn-bell-dev
+  namespace: dev
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:264765154707:certificate/PLACEHOLDER
+    external-dns.alpha.kubernetes.io/hostname: dev.cluckn-bell.com
+spec:
+  tls:
+    - hosts:
+        - dev.cluckn-bell.com
+      secretName: dev-cluckn-bell-tls
+  rules:
+    - host: dev.cluckn-bell.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: cluckin-bell-service
+                port:
+                  number: 8080
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cluckin-bell-service
+                port:
+                  number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cluckn-bell-qa
+  namespace: qa
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:264765154707:certificate/PLACEHOLDER
+    external-dns.alpha.kubernetes.io/hostname: qa.cluckn-bell.com
+spec:
+  tls:
+    - hosts:
+        - qa.cluckn-bell.com
+      secretName: qa-cluckn-bell-tls
+  rules:
+    - host: qa.cluckn-bell.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: cluckin-bell-service
+                port:
+                  number: 8080
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cluckin-bell-service
+                port:
+                  number: 80

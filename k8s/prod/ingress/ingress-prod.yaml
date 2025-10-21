@@ -1,0 +1,37 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cluckn-bell-prod
+  namespace: prod
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:346746763840:certificate/PLACEHOLDER
+    external-dns.alpha.kubernetes.io/hostname: cluckn-bell.com
+spec:
+  tls:
+    - hosts:
+        - cluckn-bell.com
+      secretName: cluckn-bell-tls
+  rules:
+    - host: cluckn-bell.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: cluckin-bell-service
+                port:
+                  number: 8080
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cluckin-bell-service
+                port:
+                  number: 80
