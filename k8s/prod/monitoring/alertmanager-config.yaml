@@ -1,0 +1,120 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alertmanager-config
+  namespace: monitoring
+type: Opaque
+stringData:
+  alertmanager.yaml: |
+    global:
+      resolve_timeout: 5m
+      # SMTP configuration - TODO: Replace with actual values from AWS Secrets Manager
+      smtp_smarthost: 'smtp.example.com:587'
+      smtp_from: 'alerts@cluckn-bell.com'
+      smtp_auth_username: 'REPLACE_WITH_SECRET'
+      smtp_auth_password: 'REPLACE_WITH_SECRET'
+      smtp_require_tls: true
+    
+    # Route configuration
+    route:
+      receiver: 'fanout'
+      group_by: ['alertname', 'instance', 'env']
+      group_wait: 10s
+      group_interval: 5m
+      repeat_interval: 2h  # More frequent for prod
+      routes:
+        # Critical alerts route (immediate)
+        - match:
+            severity: critical
+          receiver: 'fanout'
+          group_wait: 5s
+          repeat_interval: 1h
+          continue: false
+        
+        # Warning alerts route
+        - match:
+            severity: warning
+          receiver: 'fanout'
+          continue: false
+    
+    # Receivers configuration
+    receivers:
+      - name: 'fanout'
+        slack_configs:
+          - api_url: 'REPLACE_WITH_SLACK_WEBHOOK_URL'
+            channel: '#alerts-prod'
+            title: '🚨 {{ .GroupLabels.alertname }} - PRODUCTION'
+            text: |
+              {{ range .Alerts }}
+              *Alert:* {{ .Annotations.summary }}
+              *Description:* {{ .Annotations.description }}
+              *Severity:* {{ .Labels.severity }}
+              *Instance:* {{ .Labels.instance }}
+              {{ end }}
+            send_resolved: true
+        
+        email_configs:
+          - to: 'oncall@cluckn-bell.com,sre-team@cluckn-bell.com'
+            headers:
+              Subject: '[PROD][{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .GroupLabels.alertname }}'
+              Priority: 'urgent'
+            html: |
+              <h2>🚨 Production Alert: {{ .GroupLabels.alertname }}</h2>
+              <p><strong>Environment:</strong> PRODUCTION</p>
+              {{ range .Alerts }}
+              <h3>{{ .Annotations.summary }}</h3>
+              <p>{{ .Annotations.description }}</p>
+              <ul>
+                <li><strong>Severity:</strong> {{ .Labels.severity }}</li>
+                <li><strong>Instance:</strong> {{ .Labels.instance }}</li>
+                <li><strong>Status:</strong> {{ .Status }}</li>
+              </ul>
+              {{ end }}
+            send_resolved: true
+        
+        webhook_configs:
+          # SMS webhook via SNS (endpoint provided by infra)
+          - url: 'https://sns-webhook.cluckn-bell.com/prod/sms'
+            send_resolved: false
+            http_config:
+              tls_config:
+                insecure_skip_verify: false
+    
+    # Inhibition rules
+    inhibit_rules:
+      # Inhibit warning alerts if critical alert is firing for the same instance
+      - source_match:
+          severity: 'critical'
+        target_match:
+          severity: 'warning'
+        equal: ['alertname', 'instance']
+      
+      # Inhibit latency alerts if site is down
+      - source_match:
+          alertname: 'SiteDown'
+        target_match_re:
+          alertname: '.*Latency'
+        equal: ['instance']
+---
+# TODO: Create ExternalSecret to sync from AWS Secrets Manager
+# apiVersion: external-secrets.io/v1beta1
+# kind: ExternalSecret
+# metadata:
+#   name: alertmanager-config
+#   namespace: monitoring
+# spec:
+#   secretStoreRef:
+#     name: aws-secrets-manager
+#     kind: ClusterSecretStore
+#   target:
+#     name: alertmanager-config
+#     template:
+#       type: Opaque
+#       data:
+#         alertmanager.yaml: |
+#           {{ .alertmanager_config | toString }}
+#   data:
+#     - secretKey: alertmanager_config
+#       remoteRef:
+#         key: prod/monitoring/alertmanager

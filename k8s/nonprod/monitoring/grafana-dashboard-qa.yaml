@@ -1,0 +1,84 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-qa
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  qa-site.json: |
+    {
+      "title": "QA Site SLO Dashboard",
+      "uid": "qa-site-slo",
+      "tags": ["slo", "qa", "availability", "latency"],
+      "timezone": "",
+      "schemaVersion": 38,
+      "version": 0,
+      "refresh": "30s",
+      "panels": [
+        {
+          "id": 1,
+          "title": "Availability (5m)",
+          "type": "gauge",
+          "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0},
+          "targets": [{"expr": "avg(rate(probe_success{instance=~\"https://qa.cluckn-bell.com.*\"}[5m]))"}],
+          "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0, "max": 1}}
+        },
+        {
+          "id": 2,
+          "title": "Availability (1h)",
+          "type": "gauge",
+          "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0},
+          "targets": [{"expr": "avg(rate(probe_success{instance=~\"https://qa.cluckn-bell.com.*\"}[1h]))"}],
+          "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0, "max": 1}}
+        },
+        {
+          "id": 3,
+          "title": "p95 Latency",
+          "type": "gauge",
+          "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0},
+          "targets": [{"expr": "histogram_quantile(0.95, sum(rate(probe_http_duration_seconds_bucket{instance=~\"https://qa.cluckn-bell.com.*\"}[5m])) by (le))"}],
+          "fieldConfig": {"defaults": {"unit": "s"}}
+        },
+        {
+          "id": 4,
+          "title": "Availability Over Time",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "targets": [{"expr": "rate(probe_success{instance=~\"https://qa.cluckn-bell.com.*\"}[5m])", "legendFormat": "{{instance}}"}]
+        },
+        {
+          "id": 5,
+          "title": "p95 Latency Over Time",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "targets": [{"expr": "histogram_quantile(0.95, sum(rate(probe_http_duration_seconds_bucket{instance=~\"https://qa.cluckn-bell.com.*\"}[5m])) by (le, instance))", "legendFormat": "{{instance}}"}],
+          "fieldConfig": {"defaults": {"unit": "s"}}
+        },
+        {
+          "id": 6,
+          "title": "Running Pods (qa)",
+          "type": "gauge",
+          "gridPos": {"h": 8, "w": 6, "x": 0, "y": 16},
+          "targets": [{"expr": "sum(kube_pod_status_phase{namespace=\"qa\",phase=\"Running\"})"}]
+        },
+        {
+          "id": 7,
+          "title": "Avg CPU Usage (qa)",
+          "type": "gauge",
+          "gridPos": {"h": 8, "w": 6, "x": 6, "y": 16},
+          "targets": [{"expr": "avg(rate(container_cpu_usage_seconds_total{namespace=\"qa\"}[5m]))"}],
+          "fieldConfig": {"defaults": {"unit": "percentunit"}}
+        },
+        {
+          "id": 8,
+          "title": "Avg Memory Usage (qa)",
+          "type": "gauge",
+          "gridPos": {"h": 8, "w": 6, "x": 12, "y": 16},
+          "targets": [{"expr": "avg(container_memory_working_set_bytes{namespace=\"qa\"})"}],
+          "fieldConfig": {"defaults": {"unit": "bytes"}}
+        }
+      ],
+      "time": {"from": "now-6h", "to": "now"}
+    }

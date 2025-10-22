@@ -1,0 +1,16 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: cm-cluckn-bell-cert
+  namespace: monitoring
+spec:
+  secretName: cm-cluckn-bell-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+    group: cert-manager.io
+  dnsNames:
+    - cm.cluckn-bell.com
+    - qacm.cluckn-bell.com
+    - devcm.cluckn-bell.com
