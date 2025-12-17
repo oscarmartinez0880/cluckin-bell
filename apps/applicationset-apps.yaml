@@ -60,10 +60,10 @@ spec:
           selfHeal: true
           allowEmpty: false
         syncOptions:
-          - CreateNamespace=false  # Namespaces already exist
+          - CreateNamespace=true
+          - ServerSideApply=true
           - PrunePropagationPolicy=foreground
           - PruneLast=true
-          - ServerSideApply=true
         retry:
           limit: 5
           backoff:
