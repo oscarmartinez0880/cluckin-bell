@@ -47,21 +47,37 @@ jobs:
         run: |
           echo "Validating values files YAML syntax..."
           
-          # Check env values
+          # Install yq for YAML validation
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+          
+          # Check env values - first YAML syntax, then Helm rendering
           for env_file in values/env/*.yaml; do
             echo "Checking $env_file..."
+            yq eval '.' "$env_file" > /dev/null
             helm template test-release charts/app-frontend -f "$env_file" --dry-run > /dev/null
             echo "✓ $env_file is valid"
           done
           
-          # Check platform values (with default fallback for missing dependencies)
+          # Check platform values - YAML syntax only (charts have external dependencies)
           for platform_file in values/platform/*.yaml; do
             echo "Checking $platform_file..."
-            # Platform charts may have external dependencies, so we just validate YAML syntax
+            yq eval '.' "$platform_file" > /dev/null
+            echo "✓ $platform_file has valid YAML syntax"
+            
+            # Attempt Helm validation but don't fail if dependencies are missing
             if [[ "$platform_file" == *"karpenter"* ]]; then
-              helm template test-release charts/karpenter -f "$platform_file" --skip-crds --dry-run > /dev/null 2>&1 || echo "✓ $platform_file has valid YAML syntax (dependencies may be missing)"
+              if helm template test-release charts/karpenter -f "$platform_file" --skip-crds --dry-run > /dev/null 2>&1; then
+                echo "  ✓ Helm template validation passed"
+              else
+                echo "  ⚠️  Helm template validation skipped (dependencies may be missing)"
+              fi
             else
-              helm template test-release charts/platform-addons -f "$platform_file" --dry-run > /dev/null 2>&1 || echo "✓ $platform_file has valid YAML syntax (dependencies may be missing)"
+              if helm template test-release charts/platform-addons -f "$platform_file" --dry-run > /dev/null 2>&1; then
+                echo "  ✓ Helm template validation passed"
+              else
+                echo "  ⚠️  Helm template validation skipped (dependencies may be missing)"
+              fi
             fi
           done
           
@@ -102,12 +118,12 @@ jobs:
           echo "Checking for common GitOps issues..."
           
           # Check for hardcoded image tags (should use values)
-          if grep -r "image:.*:latest" charts/*/templates/ 2>/dev/null; then
+          if find charts/ -name '*.yaml' -path '*/templates/*' -exec grep -l "image:.*:latest" {} \; 2>/dev/null | head -1 > /dev/null; then
             echo "⚠️  Warning: Found hardcoded ':latest' tags in templates. Consider using values."
           fi
           
-          # Check for missing namespace references
-          if ! grep -q "namespace:" charts/*/templates/*.yaml 2>/dev/null; then
+          # Check for namespace references in templates
+          if ! find charts/ -name '*.yaml' -path '*/templates/*' -exec grep -q "namespace:" {} \; 2>/dev/null; then
             echo "ℹ️  Note: Templates should include namespace references where appropriate"
           fi
           

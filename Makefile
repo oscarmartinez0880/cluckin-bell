@@ -47,10 +47,24 @@ argocd-refresh: ## Refresh ArgoCD applications (requires ARGOCD_SERVER and ARGOC
 		exit 1; \
 	fi
 	@echo "Refreshing ArgoCD applications on $$ARGOCD_SERVER..."
-	@curl -sSL -X POST \
+	@echo "Fetching application list..."
+	@APP_LIST=$$(curl -sSL \
 		-H "Authorization: Bearer $$ARGOCD_TOKEN" \
-		-H "Content-Type: application/json" \
-		https://$$ARGOCD_SERVER/api/v1/applications/*/sync \
-		-d '{"prune": false, "dryRun": false}' || \
-		echo "Note: Use ArgoCD CLI for more control: argocd app sync <app-name>"
-	@echo "✓ Refresh request sent to ArgoCD"
+		https://$$ARGOCD_SERVER/api/v1/applications | \
+		grep -o '"name":"[^"]*"' | cut -d'"' -f4) || \
+		{ echo "Error: Failed to fetch applications"; exit 1; }; \
+	if [ -z "$$APP_LIST" ]; then \
+		echo "No applications found or authentication failed"; \
+		exit 1; \
+	fi; \
+	for app in $$APP_LIST; do \
+		echo "Syncing $$app..."; \
+		curl -sSL -X POST \
+			-H "Authorization: Bearer $$ARGOCD_TOKEN" \
+			-H "Content-Type: application/json" \
+			https://$$ARGOCD_SERVER/api/v1/applications/$$app/sync \
+			-d '{"prune": false, "dryRun": false}' > /dev/null && \
+			echo "  ✓ $$app sync initiated" || \
+			echo "  ✗ $$app sync failed"; \
+	done
+	@echo "✓ Refresh complete. For more control, use: argocd app sync <app-name>"
