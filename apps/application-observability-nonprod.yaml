@@ -4,6 +4,8 @@ kind: Application
 metadata:
   name: observability-nonprod
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
   labels:
     application: observability
     environment: nonprod
@@ -11,7 +13,7 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
-  project: default
+  project: cluckn-bell-platform
   source:
     repoURL: https://github.com/oscarmartinez0880/cluckin-bell
     targetRevision: HEAD

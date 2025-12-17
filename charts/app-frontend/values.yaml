@@ -102,3 +102,8 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+# External Secrets configuration
+externalSecrets:
+  enabled: false
+  keys: []

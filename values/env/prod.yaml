@@ -7,6 +7,16 @@ app-frontend:
     repository: 346746763840.dkr.ecr.us-east-1.amazonaws.com/cluckin-bell-app
     tag: "prod"
   
+  replicaCount: 3
+  
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+  
   ingress:
     enabled: false  # Will be enabled in Phase 2
     annotations:
@@ -19,12 +29,27 @@ app-frontend:
 
   # Use existing namespace and service account
   namespaceOverride: "cluckn-bell-prod"
+  
+  # External Secrets configuration
+  externalSecrets:
+    enabled: false
+    keys: []
 
 # Wingman API configuration  
 app-wingman-api:
   image:
     repository: 346746763840.dkr.ecr.us-east-1.amazonaws.com/wingman-api
     tag: "prod"
+  
+  replicaCount: 3
+  
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
   
   ingress:
     enabled: false  # Will be enabled in Phase 2
@@ -38,6 +63,11 @@ app-wingman-api:
 
   # Use existing namespace and service account
   namespaceOverride: "cluckn-bell-prod"
+  
+  # External Secrets configuration
+  externalSecrets:
+    enabled: false
+    keys: []
 
 # Platform add-ons configuration
 platform-addons:

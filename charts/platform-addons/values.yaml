@@ -66,6 +66,10 @@ platformAddons:
     kubeStateMetrics: {}
     nodeExporter: {}
 
+# External Secrets configuration
+externalSecrets:
+  enabled: false
+
 # Legacy compatibility toggles (will be removed later)
 aws-load-balancer-controller:
   enabled: false
