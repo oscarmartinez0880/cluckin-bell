@@ -101,6 +101,143 @@ This repository implements **Option 2: Branch-based promotion** for environment 
 
 For complete branching documentation, see [docs/GITOPS_BRANCHING.md](docs/GITOPS_BRANCHING.md) and [docs/GITOPS_RESTRUCTURE.md](docs/GITOPS_RESTRUCTURE.md).
 
+## Local Development & Validation
+
+### Makefile Targets
+
+This repository includes a `Makefile` for local development and validation:
+
+```bash
+make help           # Display available targets
+make lint           # Run helm lint on all charts
+make render-dev     # Render Helm templates for dev environment
+make render-qa      # Render Helm templates for qa environment
+make render-prod    # Render Helm templates for prod environment
+make argocd-refresh # Refresh ArgoCD applications (requires ARGOCD_SERVER and ARGOCD_TOKEN)
+```
+
+**ArgoCD Refresh Example:**
+```bash
+export ARGOCD_SERVER=argocd.example.com
+export ARGOCD_TOKEN=your-token-here
+make argocd-refresh
+```
+
+### GitHub Actions Automation
+
+This repository includes automated validation workflows:
+
+- **`gitops-validate.yaml`**: Runs on PR and push to `main`, `develop`, `staging` branches
+  - Lints all Helm charts
+  - Validates values file syntax
+  - Renders templates for all environments
+  - Validates ArgoCD manifests (ApplicationSets, Applications, Projects)
+
+- **`helm-lint.yaml`**: Legacy workflow, being superseded by `gitops-validate.yaml`
+
+### Infrastructure Repository Integration
+
+Cluster provisioning and infrastructure management is handled in the [cluckin-bell-infra](https://github.com/oscarmartinez0880/cluckin-bell-infra) Terraform repository:
+
+- **Cluster Operations**: EKS cluster creation, updates, and node group management
+- **IAM Roles**: IRSA roles for ArgoCD, External Secrets, Karpenter, and platform add-ons
+- **Networking**: VPC, subnets, security groups, and load balancer configurations
+- **DNS**: Route53 hosted zones and zone delegation
+- **Container Registry**: ECR repositories with cross-account replication
+
+**Infrastructure Makefile Targets** (in `cluckin-bell-infra` repo):
+```bash
+make init-nonprod   # Initialize Terraform for nonprod environment
+make plan-nonprod   # Plan infrastructure changes for nonprod
+make apply-nonprod  # Apply infrastructure changes for nonprod
+make init-prod      # Initialize Terraform for prod environment
+make plan-prod      # Plan infrastructure changes for prod
+make apply-prod     # Apply infrastructure changes for prod
+```
+
+**Infrastructure GitHub Actions**:
+- Automated Terraform plan on PRs
+- Automated Terraform apply on merge to main
+- Drift detection and remediation
+
+## ApplicationSet Pattern
+
+The platform uses ArgoCD ApplicationSets for declarative, matrix-based deployments:
+
+### Application ApplicationSet
+
+`apps/applicationset-apps.yaml` uses a matrix generator to deploy applications across environments:
+
+- **Matrix Dimensions**:
+  - Applications: `app-frontend`, `app-wingman-api`
+  - Environments: `dev`, `qa`, `prod`
+
+- **Benefits**:
+  - Single source of truth for multi-environment deployments
+  - Automatic creation of Applications for new environments
+  - Consistent deployment patterns across applications
+  - Reduced configuration duplication
+
+- **Customization**: Each application/environment combination:
+  - Uses environment-specific values from `values/env/{environment}.yaml`
+  - Deploys to appropriate namespace (`cluckn-bell-{environment}`)
+  - Routes to correct cluster (nonprod cluster for dev/qa, prod cluster for prod)
+
+### Platform ApplicationSet
+
+Platform components use standalone Applications with sync waves:
+
+- `apps/external-secrets.yaml` - External Secrets Operator (sync wave -4)
+- `apps/karpenter.yaml` - Karpenter node autoscaler (sync wave -3)
+- `apps/application-platform-addons.yaml` - Platform add-ons umbrella chart (sync wave -2)
+
+## Disaster Recovery (DR)
+
+Disaster recovery is primarily handled at the **infrastructure level** in the [cluckin-bell-infra](https://github.com/oscarmartinez0880/cluckin-bell-infra) repository:
+
+### Infrastructure DR Components
+
+1. **Container Images (ECR)**:
+   - Cross-region ECR replication configured in Terraform
+   - Images automatically replicated from primary region (us-east-1) to DR region
+   - Both nonprod and prod accounts include replication policies
+
+2. **Secrets Management**:
+   - AWS Secrets Manager secrets replicated across regions
+   - External Secrets Operator configured to pull from region-specific Secrets Manager
+   - Terraform manages secret replication policies
+
+3. **DNS & Traffic Management**:
+   - Route53 hosted zones with health checks
+   - Failover routing policies defined in Terraform
+   - Automated DNS updates during DR scenarios
+
+4. **Network & Security**:
+   - VPC and subnet configurations in DR region
+   - Security groups and IAM roles mirrored across regions
+   - Load balancer configurations ready for DR activation
+
+### GitOps DR Reconciliation
+
+Once a DR cluster is provisioned (via `cluckin-bell-infra` Terraform), **GitOps automatically reconciles applications**:
+
+1. **Cluster Bootstrap**: New EKS cluster created in DR region with Terraform
+2. **ArgoCD Installation**: ArgoCD bootstrapped using `bootstrap-gitops.sh` script
+3. **Automatic Sync**: ArgoCD pulls latest configurations from Git
+4. **Application Deployment**: All applications deployed automatically based on current branch state
+   - Dev/QA: Track `develop` branch
+   - Prod: Tracks `main` branch
+
+**No GitOps changes required for DR activation** - applications are deployed automatically once the cluster is available and ArgoCD is bootstrapped.
+
+**Manual Steps (Infrastructure-side)**:
+- Provision DR cluster using `cluckin-bell-infra` Terraform
+- Update Route53 to point to DR cluster load balancers
+- Bootstrap ArgoCD in DR cluster
+- Verify application health and functionality
+
+See [cluckin-bell-infra](https://github.com/oscarmartinez0880/cluckin-bell-infra) documentation for detailed DR runbooks and procedures.
+
 ## Environments and clusters
 - dev and qa share a single EKS 1.33 cluster in AWS account 264765154707
   - Namespaces: cluckn-bell-dev, cluckn-bell-qa
