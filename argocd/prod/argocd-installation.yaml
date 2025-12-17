@@ -3,11 +3,13 @@ kind: Application
 metadata:
   name: argocd
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"
   labels:
     application: cluckn-bell
     environment: platform
 spec:
-  project: default
+  project: cluckn-bell-platform
   source:
     repoURL: https://argoproj.github.io/argo-helm
     targetRevision: 7.6.12

@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: cluckn-bell-apps
+  namespace: argocd
+spec:
+  description: Cluckin Bell Application Workloads
+  sourceRepos:
+    - https://github.com/oscarmartinez0880/cluckin-bell
+    - https://github.com/oscarmartinez0880/cluckin-bell-app
+  destinations:
+    - namespace: 'cluckn-bell-*'
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ''
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'

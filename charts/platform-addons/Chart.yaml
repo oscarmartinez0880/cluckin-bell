@@ -10,9 +10,25 @@ version: 0.1.0
 # This is the version number of the application being deployed
 appVersion: "1.0.0"
 
-# Dependencies will be added in Phase 2 implementation
-# dependencies:
-#   - name: aws-load-balancer-controller
-#     version: "1.7.1"
-#     repository: "https://aws.github.io/eks-charts"
-#     condition: platformAddons.awsLoadBalancerController.enabled
+# Dependencies
+dependencies:
+  - name: aws-load-balancer-controller
+    version: "1.7.2"
+    repository: "https://aws.github.io/eks-charts"
+    condition: platformAddons.awsLoadBalancerController.enabled
+  - name: external-dns
+    version: "1.14.5"
+    repository: "https://kubernetes-sigs.github.io/external-dns/"
+    condition: platformAddons.externalDNS.enabled
+  - name: cert-manager
+    version: "v1.15.3"
+    repository: "https://charts.jetstack.io"
+    condition: platformAddons.certManager.enabled
+  - name: metrics-server
+    version: "3.12.2"
+    repository: "https://kubernetes-sigs.github.io/metrics-server/"
+    condition: platformAddons.metricsServer.enabled
+  - name: kube-prometheus-stack
+    version: "62.6.0"
+    repository: "https://prometheus-community.github.io/helm-charts"
+    condition: platformAddons.kubePrometheusStack.enabled

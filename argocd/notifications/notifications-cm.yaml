@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+  namespace: argocd
+data:
+  service.webhook.alertmanager: |
+    url: $webhook-url
+    headers:
+      - name: Content-Type
+        value: application/json
+  template.app-deployed: |
+    message: |
+      Application {{.app.metadata.name}} is now running new version.
+  template.app-health-degraded: |
+    message: |
+      Application {{.app.metadata.name}} has degraded.
+  trigger.on-deployed: |
+    - when: app.status.operationState.phase in ['Succeeded'] and app.status.health.status == 'Healthy'
+      send: [app-deployed]
+  trigger.on-health-degraded: |
+    - when: app.status.health.status == 'Degraded'
+      send: [app-health-degraded]

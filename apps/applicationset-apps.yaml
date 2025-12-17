@@ -36,12 +36,14 @@ spec:
   template:
     metadata:
       name: 'cluckn-bell-{{environment}}-{{app}}'
+      annotations:
+        argocd.argoproj.io/sync-wave: "1"
       labels:
         environment: '{{environment}}'
         application: '{{app}}'
         managed-by: applicationset
     spec:
-      project: default
+      project: cluckn-bell-apps
       source:
         repoURL: https://github.com/oscarmartinez0880/cluckin-bell
         targetRevision: '{{revision}}'
@@ -61,6 +63,7 @@ spec:
           - CreateNamespace=false  # Namespaces already exist
           - PrunePropagationPolicy=foreground
           - PruneLast=true
+          - ServerSideApply=true
         retry:
           limit: 5
           backoff:
