@@ -37,7 +37,7 @@ nodePools:
         values: ["5"]
       - key: karpenter.k8s.aws/instance-size
         operator: In
-        values: ["medium", "large", "xlarge"]
+        values: ["large", "xlarge"]
 
 ec2NodeClass:
   amiFamily: AL2023

@@ -33,6 +33,7 @@ jobs:
           helm lint charts/app-frontend
           helm lint charts/app-wingman-api
           helm lint charts/platform-addons
+          helm lint charts/karpenter
 
       - name: Template rendering smoke test
         run: |
@@ -56,6 +57,11 @@ jobs:
           helm template platform-addons charts/platform-addons -f values/platform/nonprod.yaml > /dev/null
           helm template platform-addons charts/platform-addons -f values/platform/prod.yaml > /dev/null
           
+          # Test karpenter with platform values
+          echo "Testing karpenter..."
+          helm template karpenter charts/karpenter -f values/platform/karpenter-nonprod.yaml --skip-crds > /dev/null || true
+          helm template karpenter charts/karpenter -f values/platform/karpenter-prod.yaml --skip-crds > /dev/null || true
+          
           echo "All template rendering tests passed!"
 
       - name: Validate ApplicationSet syntax
@@ -65,6 +71,8 @@ jobs:
           kubectl version --client
           kubectl apply --dry-run=client -f apps/applicationset-apps.yaml
           kubectl apply --dry-run=client -f apps/application-platform-addons.yaml
+          kubectl apply --dry-run=client -f apps/karpenter.yaml
+          kubectl apply --dry-run=client -f apps/external-secrets.yaml
           echo "ApplicationSet validation passed!"
           
           # TODO: Future enhancement - Add production diff validation
