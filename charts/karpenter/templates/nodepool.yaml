@@ -1,0 +1,21 @@
+{{- if .Values.nodePools.default.enabled }}
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: default
+spec:
+  template:
+    spec:
+      requirements:
+        {{- toYaml .Values.nodePools.default.requirements | nindent 8 }}
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: default
+      expireAfter: 720h
+  limits:
+    {{- toYaml .Values.nodePools.default.limits | nindent 4 }}
+  disruption:
+    consolidationPolicy: {{ .Values.nodePools.default.disruption.consolidationPolicy }}
+    consolidateAfter: {{ .Values.nodePools.default.disruption.consolidateAfter }}
+{{- end }}

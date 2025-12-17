@@ -1,0 +1,62 @@
+# Karpenter configuration
+karpenter:
+  enabled: true
+  
+  settings:
+    clusterName: ""
+    clusterEndpoint: ""
+    interruptionQueue: ""
+  
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: ""
+  
+  controller:
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 1
+        memory: 1Gi
+
+# NodePool configurations
+nodePools:
+  default:
+    enabled: true
+    disruption:
+      consolidationPolicy: WhenEmptyOrUnderutilized
+      consolidateAfter: 1m
+    limits:
+      cpu: 100
+      memory: 100Gi
+    requirements:
+      - key: kubernetes.io/arch
+        operator: In
+        values: ["amd64"]
+      - key: kubernetes.io/os
+        operator: In
+        values: ["linux"]
+      - key: karpenter.sh/capacity-type
+        operator: In
+        values: ["on-demand"]
+      - key: karpenter.k8s.aws/instance-category
+        operator: In
+        values: ["m", "c", "r"]
+      - key: karpenter.k8s.aws/instance-generation
+        operator: Gt
+        values: ["5"]
+
+# EC2NodeClass configuration
+ec2NodeClass:
+  amiFamily: AL2023
+  subnetSelectorTerms: []
+  securityGroupSelectorTerms: []
+  instanceProfile: ""
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 50Gi
+        volumeType: gp3
+        encrypted: true
+        deleteOnTermination: true

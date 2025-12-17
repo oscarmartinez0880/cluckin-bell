@@ -23,6 +23,62 @@ This repo contains Kubernetes resources and GitHub Actions deploy workflows for 
 For platform component enablement, see [docs/PLATFORM_ADDONS_MIGRATION.md](docs/PLATFORM_ADDONS_MIGRATION.md).
 For detailed migration information, see [docs/GITOPS_RESTRUCTURE.md](docs/GITOPS_RESTRUCTURE.md).
 
+## Architecture Overview
+
+### ArgoCD Projects
+
+The platform uses two ArgoCD Projects for security isolation and access control:
+
+- **cluckn-bell-platform**: Platform infrastructure components (ArgoCD, Karpenter, External Secrets, platform add-ons)
+  - Full cluster-wide permissions for infrastructure management
+  - Source repos include Helm chart repositories and OCI registries
+  
+- **cluckn-bell-apps**: Application workloads (frontend, APIs)
+  - Scoped to application namespaces (`cluckn-bell-*`)
+  - Developer role with sync permissions
+  - Source repos include application repositories
+
+### Sync Wave Ordering
+
+ArgoCD Applications are deployed in a specific order using sync waves to ensure dependencies are available:
+
+| Sync Wave | Component | Purpose |
+|-----------|-----------|---------|
+| -5 | ArgoCD | Self-managed ArgoCD installation |
+| -4 | External Secrets | Secrets management from AWS Secrets Manager |
+| -3 | Karpenter | Node autoscaling and provisioning |
+| -2 | Platform Add-ons | AWS Load Balancer Controller, ExternalDNS, cert-manager, metrics-server, monitoring |
+| 1 | Applications | Frontend and API workloads |
+
+### Karpenter Integration
+
+Karpenter is deployed via ArgoCD/Helm for efficient node autoscaling:
+
+- **NodePool Configuration**: Defines compute requirements and consolidation policies
+  - Nonprod: Mix of spot and on-demand instances, faster consolidation (30s)
+  - Prod: On-demand only, conservative consolidation (1m)
+  
+- **EC2NodeClass**: AWS-specific node configuration
+  - AMI Family: Amazon Linux 2023 (AL2023)
+  - Instance Profile: Managed by Terraform
+  - Subnet/Security Group Discovery: Tagged with `karpenter.sh/discovery: <cluster-name>`
+  - Block Devices: 50Gi gp3 encrypted root volume
+
+- **Configuration Files**:
+  - `charts/karpenter/`: Helm chart with Karpenter as a dependency
+  - `values/platform/karpenter-nonprod.yaml`: Nonprod cluster configuration
+  - `values/platform/karpenter-prod.yaml`: Prod cluster configuration
+  - `apps/karpenter.yaml`: ArgoCD Application definition
+
+### External Secrets Integration
+
+External Secrets Operator enables secure secrets management:
+
+- Secrets stored in AWS Secrets Manager
+- Synchronized to Kubernetes Secrets via `ExternalSecret` resources
+- Configured per application via `externalSecrets.enabled` in values files
+- Supports multiple keys per secret with property mapping
+
 ## GitOps Branching Strategy
 
 This repository implements **Option 2: Branch-based promotion** for environment management:
@@ -83,7 +139,8 @@ For complete branching documentation, see [docs/GITOPS_BRANCHING.md](docs/GITOPS
 charts/
   app-frontend/           # Helm chart for drumstick-web
   app-wingman-api/        # Helm chart for wingman-api
-  platform-addons/        # Platform components (Phase 2 scaffold)
+  platform-addons/        # Platform components umbrella chart
+  karpenter/              # Karpenter with NodePool and EC2NodeClass
 values/
   env/
     dev.yaml              # Dev environment values
@@ -93,9 +150,19 @@ values/
     nonprod.yaml          # Platform add-ons values (dev + qa)
     prod.yaml             # Platform add-ons values (prod)
     default.yaml          # Platform add-ons values (legacy)
+    karpenter-nonprod.yaml  # Karpenter configuration (nonprod)
+    karpenter-prod.yaml     # Karpenter configuration (prod)
 apps/
   applicationset-apps.yaml          # Matrix ApplicationSet
   application-platform-addons.yaml  # Platform Application
+  karpenter.yaml                    # Karpenter Application
+  external-secrets.yaml             # External Secrets Application
+argocd/
+  projects/
+    apps-project.yaml               # Application workloads project
+    platform-project.yaml           # Platform infrastructure project
+  notifications/
+    notifications-cm.yaml           # ArgoCD notifications config
 ```
 
 ### Legacy Structure (Current Production)

@@ -8,12 +8,21 @@ spec:
   sourceRepos:
     - https://github.com/oscarmartinez0880/cluckin-bell
     - https://github.com/oscarmartinez0880/cluckin-bell-app
+    - https://github.com/oscarmartinez0880/wingman-api
   destinations:
     - namespace: 'cluckn-bell-*'
       server: https://kubernetes.default.svc
+    - namespace: 'cluckn-bell-*'
+      server: '*'
   clusterResourceWhitelist:
     - group: ''
       kind: Namespace
   namespaceResourceWhitelist:
     - group: '*'
       kind: '*'
+  roles:
+    - name: developer
+      description: Developer access to applications
+      policies:
+        - p, proj:cluckn-bell-apps:developer, applications, get, cluckn-bell-apps/*, allow
+        - p, proj:cluckn-bell-apps:developer, applications, sync, cluckn-bell-apps/*, allow
